@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Predaja vozil</title>
+<meta name="description" content="Digitalna predaja reševalnih vozil">
+<meta name="theme-color" content="#1D5FBF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16202A" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Predaja vozil">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top" id="top">
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-l"><b>Predaja vozil</b><span class="who" id="who"></span></div>
+      <div class="brand-r"><span class="chip" id="sync" hidden></span><button type="button" class="btn small secondary" id="logout" hidden>Odjava</button></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Glavni meni" hidden>
+      <a href="#vozila" data-tab="vozila">Vozila</a>
+      <a href="#napake" data-tab="napake">Napake<span class="count" id="cnt" hidden></span></a>
+      <a href="#zgodovina" data-tab="zgodovina">Zgodovina</a>
+      <a href="#qr" data-tab="qr">QR kode</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div id="notice"></div>
+  <main id="app"><p class="hint">Nalagam …</p></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="qrcode.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
