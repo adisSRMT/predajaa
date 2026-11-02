@@ -1,5 +1,5 @@
-// Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
-const CACHE = 'predaja-v1';
+ Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
+const CACHE = 'predaja-v2';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'store.js', 'config.js', 'oprema.js', 'qrcode.js',
   'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
@@ -18,7 +18,7 @@ self.addEventListener('fetch', function (e) {
   var same = u.origin === self.location.origin;
   var sdk = u.hostname === 'www.gstatic.com' && u.pathname.indexOf('/firebasejs/') === 0;
   if (!same && !sdk) return;            // promet do baze gre mimo
-  if (sdk) {                            // Firebase knjižnice: najprej iz telefona
+  if (sdk) {                            // Firebase knjiÅ¾nice: najprej iz telefona
     e.respondWith(caches.match(r).then(function (m) {
       return m || fetch(r).then(function (res) {
         var c = res.clone(); caches.open(CACHE).then(function (x) { x.put(r, c); }); return res;
@@ -26,7 +26,7 @@ self.addEventListener('fetch', function (e) {
     }));
     return;
   }
-  // Datoteke aplikacije: najprej omrežje (da dobiš posodobitve), sicer iz telefona
+  // Datoteke aplikacije: najprej omreÅ¾je (da dobiÅ¡ posodobitve), sicer iz telefona
   e.respondWith(fetch(r).then(function (res) {
     if (res.ok) { var c = res.clone(); caches.open(CACHE).then(function (x) { x.put(r, c); }); }
     return res;
