@@ -49,10 +49,6 @@ export const SKUPINE = [
     ['raztopine', 'Infuzijske raztopine (rok, količina)'],
     ['kanile', 'Kanile in sistemi']
   ]},
-  { id: 'zdravila', naziv: 'Zdravila', postavke: [
-    ['zdr', 'Zdravila po seznamu vozila (rok, količina)'],
-    ['narkotiki', 'Narkotiki (štetje, pečat)']
-  ]},
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
     ['opornice', 'Opornice'],
     ['ovratnice', 'Ovratnice']
@@ -68,5 +64,43 @@ export const SKUPINE = [
   ]}
 ];
 
+// ======================================================================
+//  ZDRAVILA IN NARKOTIKI
+//
+//  Seznam je en sam za vsa vozila. Rok uporabe se za vsako vozilo vpiše
+//  ENKRAT (ob prvi predaji) in aplikacija si ga zapomni. Ob vsaki
+//  naslednji predaji se samo pokaže, da je zdravilo v roku. V mesecu, ko
+//  rok poteče, se v predaji izpiše opozorilo, po izteku roka pa mora
+//  zdravilo biti zamenjano (vpiše se nov rok).
+//
+//  Skupina z  narkotik: true  je NUJNA: pri vsaki predaji je treba
+//  preveriti in vpisati količino in številko serije. Če se količina
+//  razlikuje od zadnje predaje, je treba vpisati razlog.
+//
+//  Vsaka postavka je par: ['id', 'Naziv']. Id naj bo kratek, brez
+//  presledkov, šumnikov in podčrtajev.
+//
+//  PRIMER: spodnji seznam zamenjaj z zdravili, ki jih imate na vozilih.
+// ======================================================================
+export const ZDRAVILA = [
+  { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
+    ['morfin', 'Morfin'],
+    ['fentanil', 'Fentanil'],
+    ['midazolam', 'Midazolam']
+  ]},
+  { id: 'zdravila', naziv: 'Zdravila', postavke: [
+    ['adrenalin', 'Adrenalin'],
+    ['amiodaron', 'Amiodaron'],
+    ['atropin', 'Atropin'],
+    ['aspirin', 'Acetilsalicilna kislina'],
+    ['glukoza', 'Glukoza'],
+    ['hidrokortizon', 'Hidrokortizon'],
+    ['naloksan', 'Naloksan'],
+    ['nitro', 'Nitroglicerin'],
+    ['salbutamol', 'Salbutamol']
+  ]}
+];
+
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna'];
+export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+
