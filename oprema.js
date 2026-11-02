@@ -69,4 +69,4 @@ export const SKUPINE = [
 ];
 
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+export const IZMENE = ['Dnevna', 'Nočna'];
