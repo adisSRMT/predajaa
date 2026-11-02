@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Vsak prijavljen uporabnik.
+    function prijavljen() {
+      return request.auth != null;
+    }
+
+    // Skrbnik: ima v zbirki "uporabniki" dokument s svojim UID in poljem vloga = "admin".
+    // Ta dokument ustvariš ročno v Firebase konzoli (glej BERI-ME.md).
+    function jeAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
+        && get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.vloga == 'admin';
+    }
+
+    // Vloge: vsak lahko prebere samo svoj zapis, nihče ga ne more spremeniti iz aplikacije.
+    match /uporabniki/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // Vozila:
+    //  - posamezno vozilo (iz QR kode) lahko prebere vsak prijavljen,
+    //  - seznam vseh vozil, dodajanje in spreminjanje podatkov vozila samo skrbnik,
+    //  - ob predaji lahko vsak prijavljen spremeni samo: zadnja, zadnje, zdravila, odprte.
+    match /vozila/{id} {
+      allow get: if prijavljen();
+      allow list: if jeAdmin();
+      allow create: if jeAdmin();
+      allow update: if jeAdmin()
+        || (prijavljen()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['zadnja', 'zadnje', 'zdravila', 'odprte']));
+      allow delete: if false;
+    }
+
+    // Predaje: vsak prijavljen jih lahko odda, branje samo skrbnik.
+    // Zapisane predaje se ne dajo spremeniti ali izbrisati.
+    match /predaje/{id} {
+      allow create: if prijavljen();
+      allow read: if jeAdmin();
+      allow update, delete: if false;
+    }
+
+    // Podpisi: enako kot predaje.
+    match /podpisi/{id} {
+      allow create: if prijavljen();
+      allow read: if jeAdmin();
+      allow update, delete: if false;
+    }
+
+    // Arhiv odpravljenih napak: samo skrbnik.
+    match /napake/{id} {
+      allow read, create: if jeAdmin();
+      allow update, delete: if false;
+    }
+  }
+}
