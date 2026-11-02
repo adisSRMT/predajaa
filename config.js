@@ -4,10 +4,10 @@
 //  Vrednosti ostanejo v narekovajih. Ne spreminjaj ničesar drugega.
 // ======================================================================
 export const firebaseConfig = {
-  apiKey: "VSTAVI-TUKAJ",
-  authDomain: "VSTAVI-TUKAJ",
-  projectId: "VSTAVI-TUKAJ",
-  storageBucket: "VSTAVI-TUKAJ",
-  messagingSenderId: "VSTAVI-TUKAJ",
-  appId: "VSTAVI-TUKAJ"
+  apiKey: "AIzaSyBGaN3UlJxVlAyfZ1s52MYYeicyIyfiLDE",
+  authDomain: "predaja-vozil.firebaseapp.com",
+  projectId: "predaja-vozil",
+  storageBucket: "predaja-vozil.firebasestorage.app",
+  messagingSenderId: "347057423915",
+  appId: "1:347057423915:web:da03df9c0e44eaf7720c6e"
 };
