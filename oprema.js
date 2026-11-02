@@ -30,17 +30,15 @@ export const SKUPINE = [
   ]},
   { id: 'nosila', naziv: 'Nosila in transport', postavke: [
     ['glavna', 'Glavna nosila'],
-    ['stol', 'Stol za prenos'],
-    ['vakuum', 'Vakuumska blazina'],
-    ['pasovi', 'Pasovi']
+    ['stol', 'Kardiostol'],
   ]},
   { id: 'dihala', naziv: 'Dihala', postavke: [
     ['aspirator', 'Aspirator'],
-    ['ambu', 'Ambu mehur in maske'],
+    ['ambu', 'AMBU in maske'],
     ['dihpot', 'Pripomočki za dihalno pot'],
     ['kisikmaske', 'Kisikove maske in cevke']
   ]},
-  { id: 'srce', naziv: 'Srce', postavke: [
+  { id: 'srce', naziv: 'LIFEPAK', postavke: [
     ['defi', 'Defibrilator (samotest OK)'],
     ['elektrode', 'Elektrode (rok uporabe)'],
     ['ekg', 'EKG-kabli']
@@ -50,12 +48,14 @@ export const SKUPINE = [
     ['kanile', 'Kanile in sistemi']
   ]},
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
-    ['opornice', 'Opornice'],
-    ['ovratnice', 'Ovratnice']
+    ['opornice', 'Vratne opornice'],
+    ['o', 'O']
+    ['vakuum', 'Vakuumska blazina'],
+    ['pasovi', 'Pasovi']
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
     ['povoji', 'Povoji in obliži'],
-    ['hemostatiki', 'Hemostatiki (rok uporabe)']
+    ['h', 'H']
   ]},
   { id: 'zascita', naziv: 'Zaščita', postavke: [
     ['rokavice', 'Rokavice in maske'],
@@ -86,7 +86,7 @@ export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
     ['morfin', 'Morfin'],
     ['fentanil', 'Fentanil'],
-    ['midazolam', 'Midazolam']
+    ['piritramid', 'Dipidolor']
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
     ['adrenalin', 'Adrenalin'],
@@ -102,5 +102,5 @@ export const ZDRAVILA = [
 ];
 
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+export const IZMENE = ['Dnevna', 'Nočna'];
 
