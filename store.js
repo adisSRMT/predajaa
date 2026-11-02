@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore,
-  collection, doc, query, where, orderBy, limit, onSnapshot, setDoc, updateDoc, getDoc, writeBatch
+  collection, doc, query, where, orderBy, limit, onSnapshot, setDoc, updateDoc, getDoc, writeBatch, deleteField
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
@@ -26,6 +26,7 @@ export function connect(config) {
     };
   }
   var db = {
+    DEL: deleteField(),
     collection: function (path) { return mkQuery(path, []); },
     doc: function (path) {
       return {
