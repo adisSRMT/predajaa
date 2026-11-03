@@ -12,7 +12,7 @@ service cloud.firestore {
     // Seznam uredi v Firebase konzoli, v zavihku Rules (glej BERI-ME.md, korak 6b).
     function jeAdmin() {
       return request.auth != null
-        && (request.auth.token.email in ['adissaramati1@gmail.com']
+        && (request.auth.token.email in ['skrbnik@primer.si']
             || (exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
                 && get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.vloga == 'admin'));
     }
