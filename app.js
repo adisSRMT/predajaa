@@ -10,11 +10,11 @@ var ITEMS = {}, TOTAL = 0;
 SKUPINE.forEach(function (g) { g.postavke.forEach(function (p) { ITEMS[g.id + '.' + p.id] = { g: g, p: p }; TOTAL++; }); });
 /* Zdravila: ključ zdravila je skupina_zdravilo. Narkotiki (narkotik: true) so vedno prvi in obvezni. */
 var ZDR = ZDRAVILA_RAW.map(function (g) {
-  return { id: g.id, naziv: g.naziv, narkotik: !!g.narkotik, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1] }; }) };
+  return { id: g.id, naziv: g.naziv, narkotik: !!g.narkotik, kolicina: !!g.kolicina, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1], kolicina: !!(p[2] && p[2].kolicina) }; }) };
 });
 ZDR.sort(function (a, b) { return (b.narkotik ? 1 : 0) - (a.narkotik ? 1 : 0); });
 var MEDS = {}, MED_TOTAL = 0;
-ZDR.forEach(function (g) { g.postavke.forEach(function (p) { MEDS[g.id + '_' + p.id] = { g: g, p: p, nar: g.narkotik }; MED_TOTAL++; }); });
+ZDR.forEach(function (g) { g.postavke.forEach(function (p) { MEDS[g.id + '_' + p.id] = { g: g, p: p, nar: g.narkotik, kol: g.narkotik || g.kolicina || p.kolicina }; MED_TOTAL++; }); });
 var GORIVO = [{ v: 'rezerva', l: 'Rezerva' }, { v: '1/4', l: '¼' }, { v: '1/2', l: '½' }, { v: '3/4', l: '¾' }, { v: 'polno', l: 'Polno' }];
 var STANJA = [{ v: 'ok', l: 'V redu' }, { v: 'manjka', l: 'Manjka' }, { v: 'pokvarjeno', l: 'Pokvarjeno' }];
 var STANJA_Z = [{ v: 'ok', l: 'V redu' }, { v: 'manjka', l: 'Manjka' }];
@@ -50,6 +50,26 @@ var toastT;
 function toast(m, ms) { var t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('show'); }, ms || 3400); }
 function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
 function reduceMotion() { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+
+var ICON_QR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>';
+var ICON_MAIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
+/* QR koda vsebuje naslov aplikacije in #n-oznaka vozila. */
+function idFromQr(text) {
+  text = String(text || '').trim();
+  var m = text.match(/#n-([^\s&#]+)$/); if (!m) return null;
+  var base = text.slice(0, text.length - m[0].length);
+  if (base && base !== appBase() && base !== appBase() + 'index.html') return null;
+  try { return decodeURIComponent(m[1]); } catch (e) { return null; }
+}
+function doScan() {
+  import('./skener.js').then(function (m) { return m.odpriSkener(); }).then(function (text) {
+    if (text == null) return;
+    var id = idFromQr(text);
+    if (!id) { toast('Ta QR koda ni iz te aplikacije.', 4500); return; }
+    location.hash = '#n-' + id;
+    if (!S.user) showLogin('email', 'QR koda prebrana. Prijavi se, da odpreš predajo vozila.');
+  }).catch(function () { toast('Skenerja ni bilo mogoče naložiti. Preveri internet.', 4500); });
+}
 
 /* ---------- Rok uporabe (mesec in leto, velja do konca meseca) ---------- */
 function curIdx() { var d = new Date(); return d.getFullYear() * 12 + d.getMonth(); }
@@ -87,7 +107,7 @@ function medAlertsHTML(v) {
 }
 
 /* ---------- Stanje ---------- */
-var S = { db: null, auth: null, user: null, admin: false, roleReady: false, last: null, online: navigator.onLine !== false, pending: 0, vozila: [], odprte: [], zaprte: [], predaje: [], ready: {}, detail: {}, detailSig: {}, loading: {}, closing: null, closingText: '', filterV: '', err: '', subs: [], subKeys: {} };
+var S = { db: null, auth: null, user: null, admin: false, roleReady: false, last: null, online: navigator.onLine !== false, pending: 0, vozila: [], odprte: [], zaprte: [], predaje: [], ready: {}, detail: {}, detailSig: {}, detailFoto: {}, loading: {}, closing: null, closingText: '', filterV: '', err: '', subs: [], subKeys: {} };
 var A = $('#app'), route = null, draft = null, formBuilt = false, touched = false, formSig = '';
 var views = {};
 function voziloById(id) { return S.vozila.filter(function (v) { return v.id === id; })[0]; }
@@ -177,7 +197,7 @@ function subVozilo(id) {
 }
 function subPredaje() { sub('predaje', S.db.collection('predaje').orderBy('cas', 'desc').limit(40), function (s) { S.predaje = docs(s); }); }
 function subZaprte() { sub('zaprte', S.db.collection('napake').orderBy('zaprto', 'desc').limit(15), function (s) { S.zaprte = docs(s); }); }
-function stopSubs() { S.subs.forEach(function (u) { try { u(); } catch (e) { } }); S.subs = []; S.subKeys = {}; S.ready = {}; S.vozila = []; S.odprte = []; S.zaprte = []; S.predaje = []; S.detail = {}; S.detailSig = {}; S.loading = {}; S.err = ''; S.admin = false; S.roleReady = false; S.last = null; }
+function stopSubs() { S.subs.forEach(function (u) { try { u(); } catch (e) { } }); S.subs = []; S.subKeys = {}; S.ready = {}; S.vozila = []; S.odprte = []; S.zaprte = []; S.predaje = []; S.detail = {}; S.detailSig = {}; S.detailFoto = {}; S.loading = {}; S.err = ''; S.admin = false; S.roleReady = false; S.last = null; }
 
 /* ---------- Vozila (skrbnik) ---------- */
 function vehCard(v) {
@@ -190,7 +210,7 @@ function vehCard(v) {
 }
 views.vozila = {
   mount: function () {
-    A.innerHTML = '<div class="stack"><h1>Vozila</h1><div id="vlist" class="stack"></div>' +
+    A.innerHTML = '<div class="stack"><h1>Vozila</h1><button type="button" class="btn secondary" data-act="scan">' + ICON_QR + 'Skeniraj QR kodo</button><div id="vlist" class="stack"></div>' +
       '<details class="card" id="addbox"><summary class="sum">Dodaj vozilo</summary>' +
       '<form id="addform" class="stack" novalidate autocomplete="off" style="margin-top:14px">' +
       '<div class="field"><label for="a-oz">Oznaka vozila</label><input id="a-oz" type="text" maxlength="24" placeholder="npr. NM-12" required></div>' +
@@ -227,7 +247,7 @@ function medsCard(v) {
     h += '<div class="stack" style="gap:6px"><span class="lbl">' + esc(g.naziv) + (g.narkotik ? ' · NUJNO' : '') + '</span>';
     g.postavke.forEach(function (p) {
       var e = z[g.id + '_' + p.id] || {};
-      h += '<div class="row"><span>' + esc(p.naziv) + (g.narkotik && e.kol != null ? '<br><span class="hint">Količina ' + nf(e.kol) + ' · serija ' + esc(e.serija || '—') + '</span>' : '') + '</span>' + rokChip(e.rok) + '</div>';
+      h += '<div class="row"><span>' + esc(p.naziv) + (e.kol != null ? '<br><span class="hint">Količina ' + nf(e.kol) + (g.narkotik ? ' · serija ' + esc(e.serija || '—') : '') + '</span>' : '') + '</span>' + rokChip(e.rok) + '</div>';
     });
     h += '</div>';
   });
@@ -265,7 +285,7 @@ function newDraft(v) {
   var d = {
     hid: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     oddajnik: z.prevzemnik || '', prevzemnik: lsGet('predaja-ime') || '', izmena: '', cas: toLocalInput(new Date()), km: '', gorivo: '',
-    kisik: { stac: '', prenosna: '', rezerva: '' }, defi: '', stanja: {}, komentarji: {}, zd: {}, poskodbe: '', opombe: '', podpis1: '', podpis2: ''
+    kisik: { stac: '', prenosna: '', rezerva: '' }, defi: '', stanja: {}, komentarji: {}, zd: {}, foto: [], poskodbe: '', opombe: '', podpis1: '', podpis2: ''
   };
   Object.keys(MEDS).forEach(function (k) { d.zd[k] = { st: '', nov: false, rok: '', kol: '', serija: '', razlog: '' }; });
   return d;
@@ -275,15 +295,65 @@ function loadDraft(v) {
   try {
     var o = JSON.parse(raw); if (!o || !o.d || Date.now() - o.t > 12 * 3600 * 1000) return null;
     var d = Object.assign(newDraft(v), o.d); d.kisik = Object.assign({ stac: '', prenosna: '', rezerva: '' }, o.d.kisik || {}); d.stanja = o.d.stanja || {}; d.komentarji = o.d.komentarji || {};
+    d.foto = Array.isArray(o.d.foto) ? o.d.foto.filter(function (x) { return typeof x === 'string'; }) : [];
     var base = newDraft(v).zd, sv = o.d.zd || {}; d.zd = {};
     Object.keys(base).forEach(function (k) { d.zd[k] = Object.assign(base[k], sv[k] || {}); });
     return d;
   } catch (e) { return null; }
 }
-var saveSoon = debounce(function () { if (draft && route && route.name === 'n') lsSet('predaja-osnutek-' + route.id, JSON.stringify({ t: Date.now(), d: draft })); }, 500);
+var saveSoon = debounce(function () {
+  if (!draft || !route || route.name !== 'n') return;
+  var key = 'predaja-osnutek-' + route.id;
+  try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: draft })); }
+  catch (e) { try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d: Object.assign({}, draft, { foto: [] }) })); } catch (x) { } }
+}, 500);
 function setPath(o, p, val) { var a = p.split('.'), c = o; for (var i = 0; i < a.length - 1; i++) c = c[a[i]]; c[a[a.length - 1]] = val; }
 function getPath(o, p) { return p.split('.').reduce(function (c, k) { return c == null ? c : c[k]; }, o); }
 function vSig(v) { return JSON.stringify([v.zadnja && v.zadnja.id, v.zdravila || null, v.odprte || null]); }
+
+/* --- fotografije poškodb: pomanjšane in shranjene v bazo (Firebase Storage je plačljiv) --- */
+var MAX_FOTO = 3, MAX_FOTO_ZNAKOV = 230000;
+function thumbsHTML() { return draft.foto.map(function (s, i) { return '<div class="thumb"><img src="' + esc(s) + '" alt="Fotografija ' + (i + 1) + '"><button type="button" data-act="foto-del" data-i="' + i + '" aria-label="Odstrani fotografijo ' + (i + 1) + '">×</button></div>'; }).join(''); }
+function fotoHTML() {
+  return '<div class="field" id="foto-box"' + (draft.poskodbe.trim() || draft.foto.length ? '' : ' hidden') + '><span class="lbl">Fotografije poškodb (neobvezno, do ' + MAX_FOTO + ')</span><div class="thumbs" id="thumbs">' + thumbsHTML() + '</div>' +
+    '<button type="button" class="btn secondary small" id="foto-btn" data-act="foto-add" style="align-self:flex-start"' + (draft.foto.length >= MAX_FOTO ? ' hidden' : '') + '>Dodaj fotografijo</button><input id="foto-in" type="file" accept="image/*" multiple hidden>' +
+    '<span class="hint">Fotografije se pomanjšajo in shranijo skupaj s predajo.</span></div>';
+}
+function showFotoBox() { var b = $('#foto-box'); if (b && draft) b.hidden = !(draft.poskodbe.trim() || draft.foto.length); }
+function updateFotoBox() {
+  if (!draft) return; showFotoBox();
+  var btn = $('#foto-btn'); if (btn) btn.hidden = draft.foto.length >= MAX_FOTO;
+  var t = $('#thumbs'); if (t) t.innerHTML = thumbsHTML();
+}
+function resizeImage(file) {
+  return new Promise(function (res, rej) {
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      URL.revokeObjectURL(url);
+      var sc = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+      var out = '', q = 0.7;
+      for (var tries = 0; tries < 4; tries++) {
+        var c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+        q = 0.7; out = c.toDataURL('image/jpeg', q);
+        while (out.length > MAX_FOTO_ZNAKOV && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+        if (out.length <= MAX_FOTO_ZNAKOV) break;
+        w = Math.round(w * 0.75); h = Math.round(h * 0.75);
+      }
+      if (out.length > MAX_FOTO_ZNAKOV) rej(new Error('velika')); else res(out);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('slika')); };
+    img.src = url;
+  });
+}
+function addPhotos(files) {
+  var room = MAX_FOTO - draft.foto.length, list = Array.prototype.slice.call(files, 0, room);
+  if (files.length > room) toast('Največ ' + MAX_FOTO + ' fotografije.', 3500);
+  var chain = Promise.resolve();
+  list.forEach(function (f) {
+    chain = chain.then(function () { return resizeImage(f).then(function (url) { if (draft) { draft.foto.push(url); touched = true; } }, function () { toast('Fotografije ni bilo mogoče prebrati.'); }); });
+  });
+  chain.then(function () { updateFotoBox(); saveSoon(); });
+}
 
 function itemHTML(k) {
   var it = ITEMS[k], st = draft.stanja[k] || '', kom = draft.komentarji[k] || '', bad = st && st !== 'ok';
@@ -315,7 +385,7 @@ function needRazlog(v, k) {
   var z = draft.zd[k], last = storedMed(v, k) || {}, kol = String(z.kol).trim();
   return kol !== '' && last.kol != null && Number(kol.replace(',', '.')) !== Number(last.kol);
 }
-function medDone(k) { var z = draft.zd[k]; return MEDS[k].nar ? (String(z.kol).trim() !== '' && z.serija.trim() !== '') : !!z.st; }
+function medDone(k) { var z = draft.zd[k]; if (MEDS[k].nar) return String(z.kol).trim() !== '' && z.serija.trim() !== ''; if (!z.st) return false; return z.st === 'manjka' || !MEDS[k].kol || String(z.kol).trim() !== ''; }
 function medGroupCount(g) { var d = 0; g.postavke.forEach(function (p) { if (medDone(g.id + '_' + p.id)) d++; }); return d; }
 function medHTML(v, k) {
   var m = MEDS[k], z = draft.zd[k], e = medEff(v, k), last = storedMed(v, k) || {};
@@ -327,6 +397,9 @@ function medHTML(v, k) {
   } else {
     h += '<div class="seg" role="radiogroup" aria-label="' + esc(m.p.naziv) + '">' + STANJA_Z.map(function (s) { return '<button type="button" class="seg-b' + (z.st === s.v ? ' on ' + s.v : '') + '" role="radio" aria-checked="' + (z.st === s.v) + '" data-act="mst" data-k="' + k + '" data-v="' + s.v + '">' + s.l + '</button>'; }).join('') + '</div>' +
       '<input class="kom" type="text" maxlength="200" placeholder="Kaj manjka? (obvezno)" aria-label="Opis: ' + esc(m.p.naziv) + '" value="' + esc(z.razlog) + '" data-zd="' + k + '|razlog"' + (z.st === 'manjka' ? '' : ' hidden') + '>';
+    if (m.kol && z.st === 'ok') {
+      h += '<div class="field"><label for="m-' + k + '-kol">Količina</label><input id="m-' + k + '-kol" type="number" inputmode="numeric" min="0" step="1" data-zd="' + k + '|kol" value="' + esc(z.kol) + '">' + (last.kol != null ? '<span class="hint">Zadnjič: ' + nf(last.kol) + '</span>' : '') + '</div>';
+    }
   }
   var showRok = m.nar ? (String(z.kol).trim() === '' || Number(String(z.kol).replace(',', '.')) > 0) : z.st !== 'manjka';
   var stat = rokStat(e.rok), storedStat = rokStat(e.stored);
@@ -390,7 +463,7 @@ function buildForm(v) {
   lsSet('predaja-zadnje', JSON.stringify({ id: v.id, oznaka: v.oznaka }));
   var open = S.odprte.filter(function (n) { return n.vozilo === v.id; });
   var prefilled = !saved && z.prevzemnik;
-  var h = '<form id="hf" class="stack" novalidate autocomplete="off">' + (S.admin ? '<a class="back" href="#v-' + esc(v.id) + '">← ' + esc(v.oznaka) + '</a>' : '') +
+  var h = '<form id="hf" class="stack" novalidate autocomplete="off">' + (S.admin ? '<a class="back" href="#v-' + esc(v.id) + '">← ' + esc(v.oznaka) + '</a>' : '<a class="back" href="#vozila">← Izbira vozila</a>') +
     '<div><h1>Predaja vozila ' + esc(v.oznaka) + '</h1>' + (saved ? '<p class="hint">Nadaljuješ nedokončano predajo.</p>' : '') + '</div>';
   h += medAlertsHTML(v);
   if (open.length) h += '<section class="card stack"><h2>Odprte napake na vozilu (' + open.length + ')</h2><ul class="defects">' + open.map(defectRow).join('') + '</ul></section>';
@@ -413,7 +486,7 @@ function buildForm(v) {
   h += '<div class="stack"><h2>Pregled vozila in opreme</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
   if (zdr.length) h += '<div class="stack"><h2>Zdravila</h2><p class="hint">Rok uporabe se vpiše enkrat, potem se samo preveri. Ta mesec in po izteku roka te aplikacija opozori.</p>' + zdr.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
   h += '<section class="card stack"><h2>Poškodbe in opombe</h2>' +
-    '<div class="field"><label for="f-poskodbe">Poškodbe karoserije (neobvezno)</label><textarea id="f-poskodbe" maxlength="600" data-f="poskodbe">' + esc(draft.poskodbe) + '</textarea></div>' +
+    '<div class="field" data-field="poskodbe"><label for="f-poskodbe">Poškodbe karoserije (neobvezno)</label><textarea id="f-poskodbe" maxlength="600" data-f="poskodbe">' + esc(draft.poskodbe) + '</textarea></div>' + fotoHTML() +
     '<div class="field"><label for="f-opombe">Ostale posebnosti (neobvezno)</label><textarea id="f-opombe" maxlength="600" data-f="opombe">' + esc(draft.opombe) + '</textarea></div></section>';
   h += '<section class="card stack"><h2>Podpisa</h2>' +
     '<div class="field" data-field="podpis1"><span class="lbl">Podpis oddajnika</span><div class="pad"><canvas width="480" height="160" id="pad1" aria-label="Polje za podpis oddajnika"></canvas></div><button type="button" class="btn secondary small" data-act="clrpad" data-p="1" style="align-self:flex-start">Počisti</button></div>' +
@@ -483,19 +556,22 @@ function validate() {
   var nocom = Object.keys(ITEMS).filter(function (k) { return d.stanja[k] && d.stanja[k] !== 'ok' && !(d.komentarji[k] || '').trim(); });
   if (nocom.length) add(nocom.map(function (k) { return 'kom.' + k; }), 'Pri težavah manjka opis: ' + nocom.length);
   /* ostala zdravila */
-  var mUnr = [], mMan = [], mMiss = [], mBad = [];
+  var mUnr = [], mMan = [], mMiss = [], mBad = [], mKol = [];
   Object.keys(MEDS).forEach(function (k) {
     if (MEDS[k].nar) return;
     var zz = d.zd[k];
     if (!zz.st) { mUnr.push(k); return; }
     if (zz.st === 'manjka') { if (!zz.razlog.trim()) mMan.push(k); return; }
+    if (MEDS[k].kol) { var kk = String(zz.kol).trim().replace(',', '.'), kn = Number(kk); if (kk === '' || isNaN(kn) || kn < 0 || Math.floor(kn) !== kn) mKol.push(k); }
     var rp = rokProblem(k); if (rp === 'miss') mMiss.push(k); else if (rp === 'bad') mBad.push(k);
   });
   function zk(a) { return a.map(function (k) { return 'zd.' + k; }); }
   if (mUnr.length) add(zk(mUnr), 'Zdravila brez ocene: ' + mUnr.length);
   if (mMan.length) add(zk(mMan), 'Pri zdravilih, ki manjkajo, manjka opis: ' + mMan.length);
+  if (mKol.length) add(zk(mKol), 'Manjka količina pri zdravilih: ' + mKol.length);
   if (mMiss.length) add(zk(mMiss), 'Manjka rok uporabe pri zdravilih: ' + mMiss.length);
   if (mBad.length) add(zk(mBad), 'Neveljaven ali potekel rok uporabe pri zdravilih: ' + mBad.length);
+  if (d.foto.length && !d.poskodbe.trim()) add('poskodbe', 'Pri fotografijah opiši poškodbo');
   if (!d.podpis1) add('podpis1', 'Manjka podpis oddajnika');
   if (!d.podpis2) add('podpis2', 'Manjka podpis prevzemnika');
   return iss;
@@ -541,6 +617,7 @@ function submitForm() {
     } else {
       rec.st = zz.st; inStock = zz.st === 'ok';
       if (zz.st === 'manjka') rec.razlog = zz.razlog.trim();
+      if (m.kol && inStock) rec.kol = Number(String(zz.kol).replace(',', '.'));
     }
     if (inStock) {
       rec.rok = e.rok;
@@ -549,6 +626,7 @@ function submitForm() {
     zdOut[k] = rec;
     if (m.nar) { var ent = { kol: rec.kol, serija: rec.serija, pos: nowIso }; if (inStock) ent.rok = e.rok; zUpd['zdravila.' + k] = ent; }
     else if (rec.st === 'manjka') zUpd['zdravila.' + k] = S.db.DEL;
+    else if (m.kol && inStock) { var ent2 = { kol: rec.kol, pos: nowIso }; if (e.rok) ent2.rok = e.rok; zUpd['zdravila.' + k] = ent2; }
     else if (e.needIn) zUpd['zdravila.' + k] = { rok: e.rok, pos: nowIso };
     if (rec.st === 'manjka') medMiss.push(k);
   });
@@ -556,7 +634,7 @@ function submitForm() {
     vozilo: v.id, voziloOznaka: v.oznaka, oddajnik: d.oddajnik.trim(), prevzemnik: d.prevzemnik.trim(), izmena: d.izmena, cas: casIso,
     km: Number(String(d.km).replace(',', '.')), gorivo: d.gorivo, kisik: kisik, defi: Number(String(d.defi).replace(',', '.')),
     stanja: d.stanja, komentarji: d.komentarji, imena: imena, zdravila: zdOut, opozorila: opoz, stOpozoril: opoz.length, poskodbe: d.poskodbe.trim(), opombe: d.opombe.trim(),
-    stNapak: problems.length + medMiss.length, ustvarjeno: nowIso
+    stNapak: problems.length + medMiss.length, stFoto: d.foto.length, ustvarjeno: nowIso
   };
   var sig = { vozilo: v.id, podpis1: d.podpis1, podpis2: d.podpis2 };
   var zadnja = { id: hid, cas: casIso, oddajnik: doc.oddajnik, prevzemnik: doc.prevzemnik, izmena: doc.izmena, km: doc.km, gorivo: doc.gorivo, kisik: { stac: kisik.stac, prenosna: kisik.prenosna }, stNapak: doc.stNapak };
@@ -573,6 +651,7 @@ function submitForm() {
   var b = S.db.batch();
   b.set('predaje/' + hid, doc);
   b.set('podpisi/' + hid, sig);
+  if (d.foto.length) b.set('fotke/' + hid, { vozilo: v.id, slike: d.foto.slice(), ustvarjeno: nowIso });
   b.update('vozila/' + v.id, Object.assign({ zadnja: zadnja, zadnje: zadnje }, zUpd, oUpd));
   /* Zapis se najprej shrani v telefon in se sam pošlje, ko je povezava. Ne čakamo na strežnik. */
   S.pending++; updateStatus();
@@ -589,7 +668,7 @@ function submitForm() {
   } catch (e) { }
   draft = null; formBuilt = false; touched = false;
   S.last = { id: v.id, oznaka: v.oznaka, hid: hid, opoz: opoz, stNapak: doc.stNapak, brezPovezave: !S.online };
-  if (S.admin) { S.detail[hid] = Object.assign({ id: hid }, doc); S.detailSig[hid] = sig; }
+  if (S.admin) { S.detail[hid] = Object.assign({ id: hid }, doc); S.detailSig[hid] = sig; if (d.foto.length) S.detailFoto[hid] = { slike: d.foto.slice() }; }
   toast(S.online ? 'Predaja shranjena.' : 'Predaja shranjena v telefon. Pošlje se, ko bo povezava.', 4500);
   location.hash = S.admin ? '#p-' + hid : '#hvala';
 }
@@ -599,10 +678,9 @@ views.n = {
     if (!S.admin) subVozilo(route.id);
   },
   update: function () {
-    var rk = S.admin ? 'vozila' : 'v:' + route.id;
-    if (!S.ready[rk]) return;
+    if (!(S.admin ? S.ready.vozila : (S.ready['v:' + route.id] || S.ready.vozila))) return;
     var v = voziloById(route.id);
-    if (!v) { if (!formBuilt) A.innerHTML = (S.admin ? '<a class="back" href="#vozila">← Vozila</a>' : '') + '<div class="card"><h2>Vozilo ni najdeno</h2><p>Oznaka vozila iz QR kode ne obstaja v aplikaciji.</p></div>'; return; }
+    if (!v) { if (!formBuilt) A.innerHTML = '<a class="back" href="#vozila">← ' + (S.admin ? 'Vozila' : 'Izbira vozila') + '</a>' + '<div class="card"><h2>Vozilo ni najdeno</h2><p>Oznaka vozila iz QR kode ne obstaja v aplikaciji.</p></div>'; return; }
     if (formBuilt) { if (!touched && vSig(v) !== formSig) buildForm(v); return; }
     buildForm(v); formBuilt = true;
   }
@@ -611,9 +689,19 @@ views.n = {
 /* ---------- Domov in potrditev (navadni uporabnik) ---------- */
 views.dom = {
   mount: function () {
-    var l = null; try { l = JSON.parse(lsGet('predaja-zadnje') || 'null'); } catch (e) { }
-    A.innerHTML = '<div class="card stack"><h1>Predaja vozila</h1><p>Skeniraj QR kodo na vozilu s kamero telefona. Odpre se predaja tega vozila.</p>' +
-      (l && l.id ? '<a class="btn secondary" href="#n-' + esc(l.id) + '">Zadnje vozilo: ' + esc(l.oznaka) + '</a>' : '') + '</div>';
+    subVozila();
+    A.innerHTML = '<div class="stack"><div class="card stack"><h1>Predaja vozila</h1><p class="hint">Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.</p>' +
+      '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button></div>' +
+      '<h2>Vozila</h2><div id="dlist" class="stack"></div></div>';
+  },
+  update: function () {
+    var l = $('#dlist'); if (!l) return;
+    if (!S.ready.vozila) { l.innerHTML = '<p class="hint">Nalagam vozila …</p>'; return; }
+    var act = S.vozila.filter(function (v) { return v.aktivno !== false; });
+    l.innerHTML = act.length ? act.map(function (v) {
+      var sub = [v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
+      return '<a class="vlistbtn" href="#n-' + esc(v.id) + '"><b>' + esc(v.oznaka) + '</b><span class="hint">' + sub + '</span></a>';
+    }).join('') : '<p class="hint">Na seznamu še ni vozil. Obrni se na skrbnika.</p>';
   }
 };
 views.hvala = {
@@ -624,7 +712,7 @@ views.hvala = {
     (l.opoz || []).forEach(function (o) {
       h += o.tip === 'mesec' ? '<div class="banner warn">Opozorilo! Ta mesec poteče zdravilo ' + esc(o.naziv) + ' (' + rokFmt(o.rok) + ').</div>' : '<div class="banner warn">Razlika v količini: ' + esc(o.naziv) + ' (prej ' + o.prej + ', zdaj ' + o.kol + ').</div>';
     });
-    h += '<p class="hint">Za predajo drugega vozila skeniraj njegovo QR kodo.</p></div>';
+    h += '<div class="choice"><button type="button" class="btn primary" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button><a class="btn secondary" href="#vozila">Izbira vozila</a></div></div>';
     A.innerHTML = h;
   }
 };
@@ -646,7 +734,7 @@ function medDetailHTML(p) {
   groups.sort(function (a, b) { return (b.nar ? 1 : 0) - (a.nar ? 1 : 0); });
   return groups.map(function (g) {
     return '<section class="card stack"><h2>' + esc(g.naziv) + (g.nar ? ' <span class="chip bad">NUJNO</span>' : '') + '</h2>' + g.rows.map(function (r) {
-      var line = g.nar ? 'Količina ' + nf(r.kol) + ' · serija ' + esc(r.serija || '—') : (r.st === 'ok' ? '' : esc(r.razlog || ''));
+      var line = g.nar ? 'Količina ' + nf(r.kol) + ' · serija ' + esc(r.serija || '—') : (r.st === 'ok' ? (r.kol != null ? 'Količina ' + nf(r.kol) : '') : esc(r.razlog || ''));
       var extra = r.razlog && g.nar ? '<div class="hint">Razlika: prej ' + nf(r.prej) + ', zdaj ' + nf(r.kol) + '. Razlog: ' + esc(r.razlog) + '</div>' : '';
       return '<div class="stack" style="gap:2px"><div class="row"><b>' + esc(r.naziv) + '</b>' + (r.rok ? rokChip(r.rok) : '<span class="chip ' + (r.st === 'ok' ? 'ok' : 'warn') + '">' + (r.st === 'ok' ? 'V redu' : 'Manjka') + '</span>') + '</div>' + (line ? '<div class="hint">' + line + '</div>' : '') + extra + '</div>';
     }).join('') + '</section>';
@@ -677,6 +765,14 @@ views.p = {
     h += medDetailHTML(p);
     h += '<section class="card stack"><h2>Težave pri predaji (' + probs.length + ')</h2>' + (probs.length ? '<ul class="defects">' + probs.map(function (x) { var nm = (p.imena && p.imena[x]) || (ITEMS[x] ? ITEMS[x].g.naziv + ' · ' + ITEMS[x].p.naziv : x); return '<li class="defect"><div class="row"><strong>' + esc(nm) + '</strong><span class="chip ' + (p.stanja[x] === 'pokvarjeno' ? 'bad' : 'warn') + '">' + esc(stanjeL(p.stanja[x])) + '</span></div><div>' + esc((p.komentarji || {})[x]) + '</div></li>'; }).join('') + '</ul>' : '<p class="hint">Vsa oprema je v redu.</p>') + '</section>';
     if (p.poskodbe || p.opombe) h += '<section class="card stack">' + (p.poskodbe ? '<div><span class="lbl">Poškodbe karoserije</span><p>' + esc(p.poskodbe) + '</p></div>' : '') + (p.opombe ? '<div><span class="lbl">Ostale posebnosti</span><p>' + esc(p.opombe) + '</p></div>' : '') + '</section>';
+    if (p.stFoto) {
+      if (S.detailFoto[id] === undefined && S.db) {
+        S.detailFoto[id] = 'nalagam';
+        S.db.doc('fotke/' + id).get().then(function (s) { S.detailFoto[id] = s.exists ? s.data() : null; if (route && route.name === 'p' && route.id === id) views.p.update(); }).catch(function () { S.detailFoto[id] = null; if (route && route.name === 'p' && route.id === id) views.p.update(); });
+      }
+      var fo = S.detailFoto[id];
+      h += '<section class="card stack"><h2>Fotografije poškodb (' + p.stFoto + ')</h2>' + (fo === 'nalagam' || fo === undefined ? '<p class="hint">Nalagam fotografije …</p>' : fo && fo.slike ? '<div class="gal stack">' + fo.slike.map(function (sl, i) { return /^data:image\/jpeg;base64,/.test(sl) ? '<img data-act="foto-big" data-id="' + esc(id) + '" data-i="' + i + '" alt="Fotografija ' + (i + 1) + '" src="' + esc(sl) + '">' : ''; }).join('') + '</div><p class="hint">Klikni na fotografijo za povečavo.</p>' : '<p class="hint">Fotografije niso na voljo (morda si brez povezave).</p>') + '</section>';
+    }
     var sg = S.detailSig[id];
     var one = function (s, l) { return /^data:image\/png;base64,/.test(s || '') ? '<div class="field"><span class="lbl">' + l + '</span><img class="sig" alt="' + l + '" src="' + esc(s) + '"></div>' : ''; };
     h += '<section class="card stack"><h2>Podpisa</h2>' + (sg === 'nalagam' || sg === undefined ? '<p class="hint">Nalagam podpise …</p>' : sg ? one(sg.podpis1, 'Oddajnik') + one(sg.podpis2, 'Prevzemnik') : '<p class="hint">Podpisi niso na voljo (morda si brez povezave).</p>') + '</section>';
@@ -779,7 +875,7 @@ A.addEventListener('input', function (e) {
   var t = e.target;
   if (draft && t.closest && t.closest('#hf')) touched = true;
   if (t.dataset && t.dataset.f && draft) {
-    setPath(draft, t.dataset.f, t.value); t.classList.remove('invalid'); var f = t.closest('.field'); if (f) f.classList.remove('invalid'); saveSoon();
+    setPath(draft, t.dataset.f, t.value); t.classList.remove('invalid'); var f = t.closest('.field'); if (f) f.classList.remove('invalid'); if (t.dataset.f === 'poskodbe') showFotoBox(); saveSoon();
   } else if (t.dataset && t.dataset.kom && draft) {
     draft.komentarji[t.dataset.kom] = t.value; t.classList.remove('invalid'); saveSoon();
   } else if (t.dataset && t.dataset.zd && draft) {
@@ -798,6 +894,7 @@ A.addEventListener('input', function (e) {
 A.addEventListener('change', function (e) {
   var t = e.target;
   if (t.id === 'fv') { S.filterV = t.value; views.zgodovina.update(); }
+  else if (t.id === 'foto-in' && draft) { var fs = Array.prototype.slice.call(t.files || []); t.value = ''; if (fs.length) { touched = true; addPhotos(fs); } }
   else if (t.dataset && t.dataset.zd && draft && t.dataset.zd.split('|')[1] === 'rok') {
     var k = t.dataset.zd.split('|')[0]; draft.zd[k].rok = t.value; refreshMed(k);
   }
@@ -842,6 +939,12 @@ A.addEventListener('click', function (e) {
   else if (a === 'izmena' && draft) { draft.izmena = v; setSeg('izmena', v); var f1 = $('[data-field="izmena"]'); if (f1) f1.classList.remove('invalid'); saveSoon(); }
   else if (a === 'gorivo' && draft) { draft.gorivo = v; setSeg('gorivo', v); var f2 = $('[data-field="gorivo"]'); if (f2) f2.classList.remove('invalid'); saveSoon(); }
   else if (a === 'clrpad') { var c = $('#pad' + b.dataset.p); if (c && c.clearPad) c.clearPad(); }
+  else if (a === 'scan') { doScan(); }
+  else if (a === 'login-email') { showLogin('email'); }
+  else if (a === 'login-back') { try { history.replaceState(null, '', location.pathname + location.search); } catch (x) { } showLogin('choice'); }
+  else if (a === 'foto-add') { var fi = $('#foto-in'); if (fi) fi.click(); }
+  else if (a === 'foto-del' && draft) { draft.foto.splice(Number(b.dataset.i), 1); updateFotoBox(); saveSoon(); }
+  else if (a === 'foto-big') { var fl = S.detailFoto[b.dataset.id]; if (fl && fl.slike && fl.slike[Number(b.dataset.i)]) openLightbox(fl.slike[Number(b.dataset.i)]); }
   else if (a === 'hide' || a === 'unhide') {
     S.db.doc('vozila/' + id).update({ aktivno: a === 'unhide' }).catch(function (x) { handleWriteError(x, true); });
     if (a === 'hide') { location.hash = '#vozila'; toast('Vozilo je skrito.'); }
@@ -861,7 +964,19 @@ A.addEventListener('click', function (e) {
     catch (x) { toast('Kopiranje ni uspelo. Označi povezavo in jo kopiraj ročno.'); }
   }
 });
-window.addEventListener('hashchange', onRoute);
+function openLightbox(src) {
+  var old = $('.lightbox'); if (old) old.remove();
+  var lb = document.createElement('div'); lb.className = 'lightbox'; lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-label', 'Fotografija, klikni za zaprtje');
+  var im = document.createElement('img'); im.src = src; im.alt = 'Fotografija poškodbe'; lb.appendChild(im);
+  function close() { lb.remove(); document.removeEventListener('keydown', esc2); }
+  function esc2(ev) { if (ev.key === 'Escape') close(); }
+  lb.addEventListener('click', close); document.addEventListener('keydown', esc2); document.body.appendChild(lb);
+}
+window.addEventListener('hashchange', function () {
+  /* Odjavljen: če se odpre povezava vozila (QR s kamero telefona), pokaži prijavo z e-pošto. */
+  if (!S.user) { if (loginShown && /^#n-/.test(location.hash || '') && !$('#loginform')) showLogin(); return; }
+  onRoute();
+});
 window.addEventListener('online', function () { S.online = true; updateStatus(); });
 window.addEventListener('offline', function () { S.online = false; updateStatus(); });
 $('#logout').addEventListener('click', function () {
@@ -870,12 +985,28 @@ $('#logout').addEventListener('click', function () {
 });
 
 /* ---------- Zagon ---------- */
-function showLogin() {
-  stopSubs(); S.user = null; route = null; draft = null; formBuilt = false; touched = false; setChrome(false); updateNotice();
-  A.innerHTML = '<div class="login card stack"><img class="logo" src="icon-192.png" alt=""><h1>Prijava</h1><p class="hint">Vpiši podatke, ki ti jih je dal skrbnik aplikacije.</p>' +
-    '<form id="loginform" class="stack" novalidate><div class="field"><label for="l-email">E-poštni naslov</label><input id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>' +
-    '<div class="field"><label for="l-pass">Geslo</label><input id="l-pass" type="password" autocomplete="current-password"></div>' +
-    '<p class="err" id="l-err" role="alert"></p><button class="btn primary" type="submit" id="l-btn">Prijava</button></form></div>';
+var loginShown = false;
+function showLogin(mode, note) {
+  loginShown = true; stopSubs(); S.user = null; route = null; draft = null; formBuilt = false; touched = false; setChrome(false); updateNotice();
+  var withCar = /^#n-/.test(location.hash || '');
+  var explicit = !!mode;
+  if (!mode) mode = withCar ? 'email' : 'choice';
+  if (mode === 'email' && !note && withCar) note = 'Prijavi se, da odpreš predajo vozila.';
+  var h = '<div class="login card stack"><img class="logo" src="icon-192.png" alt="">';
+  if (mode === 'choice') {
+    h += '<h1>Predaja vozila</h1><p class="hint">Izberi, kako želiš nadaljevati.</p><div class="choice">' +
+      '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button>' +
+      '<button type="button" class="btn secondary big" data-act="login-email">' + ICON_MAIL + '<span>Prijava z e-pošto</span></button></div>' +
+      '<p class="hint">QR koda izbere vozilo, nato se prijaviš z e-pošto. Na istem telefonu se prijaviš samo enkrat.</p>';
+  } else {
+    h += '<h1>Prijava</h1>' + (note ? '<p class="notice ok" role="status">' + esc(note) + '</p>' : '<p class="hint">Vpiši podatke, ki ti jih je dal skrbnik aplikacije.</p>') +
+      '<form id="loginform" class="stack" novalidate><div class="field"><label for="l-email">E-poštni naslov</label><input id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>' +
+      '<div class="field"><label for="l-pass">Geslo</label><input id="l-pass" type="password" autocomplete="current-password"></div>' +
+      '<p class="err" id="l-err" role="alert"></p><button class="btn primary" type="submit" id="l-btn">Prijava</button></form>' +
+      '<button type="button" class="btn secondary small" data-act="login-back" style="align-self:flex-start">← Nazaj</button>';
+  }
+  A.innerHTML = h + '</div>';
+  if (mode === 'email' && (explicit || note)) setTimeout(function () { var e = $('#l-email'); if (e && !S.user) e.focus(); }, 0);
 }
 function fatal(title, text) { setChrome(false); A.innerHTML = '<div class="card stack"><h2>' + esc(title) + '</h2><p>' + text + '</p></div>'; }
 function registerSW() {
@@ -883,18 +1014,21 @@ function registerSW() {
   var go = function () { navigator.serviceWorker.register('sw.js').catch(function () { }); };
   if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
 }
-/* Vloga: skrbnik ima v zbirki "uporabniki" dokument s svojim UID in vloga = "admin". Vsi ostali so navadni uporabniki. */
+/* Vloga: skrbnik je tisti, ki mu pravila baze dovolijo prebrati zgodovino predaj (pravila: e-poštni naslov
+   skrbnika ali dokument v zbirki "uporabniki"). Aplikacija to samo preveri pri strežniku. Brez povezave velja
+   zadnja znana vloga. Prava zaščita podatkov so pravila baze, ne to preverjanje. */
 function loadRole(user) {
   var key = 'predaja-vloga-' + user.uid, cached = lsGet(key);
-  return S.db.doc('uporabniki/' + user.uid).get().then(function (s) {
-    var a = !!(s.exists && s.data().vloga === 'admin'); lsSet(key, a ? 'admin' : 'user'); return a;
-  }).catch(function (e) {
-    if (e && e.code === 'permission-denied') { S.err = 'rules'; return false; }
+  if (!S.online) return Promise.resolve(cached === 'admin');
+  var probe = S.db.collection('predaje').limit(1).getServer().then(function () { lsSet(key, 'admin'); return true; }, function (e) {
+    if (e && e.code === 'permission-denied') { lsSet(key, 'user'); return false; }
     return cached === 'admin';
   });
+  var timeout = new Promise(function (res) { setTimeout(function () { res(cached === 'admin'); }, 8000); });
+  return Promise.race([probe, timeout]);
 }
 function startSession(user) {
-  S.user = user; S.admin = false; S.roleReady = false; S.last = null;
+  loginShown = false; S.user = user; S.admin = false; S.roleReady = false; S.last = null;
   setChrome(true); A.innerHTML = '<p class="hint">Nalagam …</p>';
   loadRole(user).then(function (a) {
     if (S.user !== user) return;
@@ -920,4 +1054,5 @@ function init() {
     fatal('Ni povezave', 'Aplikacije ni bilo mogoče naložiti. Če jo odpiraš prvič, potrebuješ internet. Po prvem odprtju deluje tudi brez povezave.');
   });
 }
+init();}
 init();
