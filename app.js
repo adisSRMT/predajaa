@@ -156,6 +156,7 @@ function updateNotice() {
 }
 function setChrome(loggedIn) {
   $('#nav').hidden = !(loggedIn && S.admin); $('#logout').hidden = !loggedIn;
+  var hn = $('#hdr-nmp'); if (hn) hn.hidden = !loggedIn;
   $('#who').textContent = loggedIn && S.user ? (S.user.email || '') + (S.admin ? ' · skrbnik' : '') : '';
 }
 function onRoute() {
@@ -992,7 +993,7 @@ function showLogin(mode, note) {
   var explicit = !!mode;
   if (!mode) mode = withCar ? 'email' : 'choice';
   if (mode === 'email' && !note && withCar) note = 'Prijavi se, da odpreš predajo vozila.';
-  var h = '<div class="login card stack"><img class="logo" src="icon-192.png" alt="">';
+  var h = '<div class="login card stack"><img class="logo-nmp" src="logo-nmp.png" alt="Nujna medicinska pomoč Slovenija" width="132" height="132">';
   if (mode === 'choice') {
     h += '<h1>Predaja vozila</h1><p class="hint">Izberi, kako želiš nadaljevati.</p><div class="choice">' +
       '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button>' +
@@ -1006,7 +1007,7 @@ function showLogin(mode, note) {
       '<button type="button" class="btn secondary small" data-act="login-back" style="align-self:flex-start">← Nazaj</button>';
   }
   A.innerHTML = h + '</div>';
-  if (mode === 'email' && (explicit || note)) setTimeout(function () { var e = $('#l-email'); if (e && !S.user) e.focus(); }, 0);
+  if (mode === 'email' && (explicit || note)) { var fe = $('#l-email'); if (fe) fe.focus(); }
 }
 function fatal(title, text) { setChrome(false); A.innerHTML = '<div class="card stack"><h2>' + esc(title) + '</h2><p>' + text + '</p></div>'; }
 function registerSW() {

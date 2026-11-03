@@ -195,6 +195,12 @@ Pri **Poškodbe in opombe** se, ko uporabnik vpiše poškodbo karoserije, pokaž
 - Brez signala se fotografije shranijo skupaj s predajo in se pošljejo, ko je povezava spet tam.
 - Ne fotografiraj pacientov in njihovih podatkov. Fotografije so samo za poškodbe vozila.
 
+## Logotipi
+
+Zdravstveni dom Brežice je zgoraj levo na vsaki strani, logotip Nujne medicinske pomoči je na prvi strani nad naslovom »Predaja vozila«, po prijavi pa tudi zgoraj levo ob logotipu doma. Logotip zamenjaš tako, da na GitHubu naložiš novo datoteko z **istim imenom** (**Add file** → **Upload files**, nato **Commit changes**). Priporočena je slika PNG s prozornim ozadjem. Logotip doma ima dve datoteki, ker je besedilo »Zdravstveni dom« na temnem ozadju belo, na svetlem pa temno: `logo-zd.png` je za temen način telefona, `logo-zd-light.png` za svetel način.
+
+> Repozitorij je javen, zato so javni tudi logotipi.
+
 ## Vsakdanje spremembe
 
 ### Sprememba seznama opreme
@@ -258,6 +264,7 @@ Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–
 | `config.js` | povezava s Firebase (enkrat izpolniš) |
 | `firestore.rules` | pravila baze (prilepiš v Firebase) |
 | `sw.js`, `manifest.webmanifest` | namestitev na telefon in delovanje brez signala |
-| `icon*.png`, `icon.svg`, `apple-touch-icon.png`, `favicon-32.png` | ikona aplikacije |
+| `icon*.png`, `icon.svg`, `apple-touch-icon.png`, `favicon-32.png` | ikona aplikacije (na začetnem zaslonu telefona) |
+| `logo-zd.png`, `logo-zd-light.png`, `logo-nmp.png` | logotipi: Zdravstveni dom Brežice (zgoraj levo; `logo-zd.png` je za temen način, `logo-zd-light.png` za svetel način) in Nujna medicinska pomoč (na prvi strani in zgoraj levo po prijavi) |
 | `qrcode.js`, `LICENSE-qrcode.txt` | izdelava QR kod (knjižnica qrcode-generator, licenca MIT) |
 | `skener.js`, `jsqr.js`, `LICENSE-jsqr.txt` | branje QR kod s kamero v aplikaciji (knjižnica jsQR, licenca Apache 2.0) |

@@ -1,7 +1,7 @@
 // Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
-const CACHE = 'predaja-v3';
+const CACHE = 'predaja-v4';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'store.js', 'config.js', 'oprema.js', 'qrcode.js', 'skener.js', 'jsqr.js',
-  'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
+  'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'logo-zd.png', 'logo-zd-light.png', 'logo-nmp.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CORE); }).then(function () { return self.skipWaiting(); }));
