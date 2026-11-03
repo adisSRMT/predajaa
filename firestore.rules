@@ -7,12 +7,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Skrbnik: ima v zbirki "uporabniki" dokument s svojim UID in poljem vloga = "admin".
-    // Ta dokument ustvariš ročno v Firebase konzoli (glej BERI-ME.md).
+    // Skrbnik: e-poštni naslov je na seznamu spodaj (MALE ČRKE, več naslovov ločiš z vejico),
+    // ALI pa ima v zbirki "uporabniki" dokument s svojim UID in poljem vloga = "admin".
+    // Seznam uredi v Firebase konzoli, v zavihku Rules (glej BERI-ME.md, korak 6b).
     function jeAdmin() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
-        && get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.vloga == 'admin';
+        && (request.auth.token.email in ['skrbnik@primer.si']
+            || (exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
+                && get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.vloga == 'admin'));
     }
 
     // Vloge: vsak lahko prebere samo svoj zapis, nihče ga ne more spremeniti iz aplikacije.
@@ -22,12 +24,11 @@ service cloud.firestore {
     }
 
     // Vozila:
-    //  - posamezno vozilo (iz QR kode) lahko prebere vsak prijavljen,
-    //  - seznam vseh vozil, dodajanje in spreminjanje podatkov vozila samo skrbnik,
+    //  - seznam vozil in posamezno vozilo lahko bere vsak prijavljen (izbira vozila, QR koda),
+    //  - dodajanje vozil in spreminjanje njihovih podatkov (oznaka, skrivanje) samo skrbnik,
     //  - ob predaji lahko vsak prijavljen spremeni samo: zadnja, zadnje, zdravila, odprte.
     match /vozila/{id} {
-      allow get: if prijavljen();
-      allow list: if jeAdmin();
+      allow get, list: if prijavljen();
       allow create: if jeAdmin();
       allow update: if jeAdmin()
         || (prijavljen()
@@ -46,6 +47,13 @@ service cloud.firestore {
 
     // Podpisi: enako kot predaje.
     match /podpisi/{id} {
+      allow create: if prijavljen();
+      allow read: if jeAdmin();
+      allow update, delete: if false;
+    }
+
+    // Fotografije poškodb: vsak prijavljen jih lahko odda, branje samo skrbnik.
+    match /fotke/{id} {
       allow create: if prijavljen();
       allow read: if jeAdmin();
       allow update, delete: if false;
