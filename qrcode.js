@@ -628,16 +628,16 @@ var qrcode = function() {
       var y, x, r1, r2, p;
 
       var blocks = {
-        '██': '█',
-        '█ ': '▀',
-        ' █': '▄',
+        'ââ': 'â',
+        'â ': 'â',
+        ' â': 'â',
         '  ': ' '
       };
 
       var blocksLastLineNoMargin = {
-        '██': '▀',
-        '█ ': '▀',
-        ' █': ' ',
+        'ââ': 'â',
+        'â ': 'â',
+        ' â': ' ',
         '  ': ' '
       };
 
@@ -646,7 +646,7 @@ var qrcode = function() {
         r1 = Math.floor((y - min) / cellSize);
         r2 = Math.floor((y + 1 - min) / cellSize);
         for (x = 0; x < size; x += 1) {
-          p = '█';
+          p = 'â';
 
           if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
             p = ' ';
@@ -656,7 +656,7 @@ var qrcode = function() {
             p += ' ';
           }
           else {
-            p += '█';
+            p += 'â';
           }
 
           // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
@@ -667,7 +667,7 @@ var qrcode = function() {
       }
 
       if (size % 2 && margin > 0) {
-        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('â');
       }
 
       return ascii.substring(0, ascii.length-1);
@@ -689,7 +689,7 @@ var qrcode = function() {
 
       var y, x, r, p;
 
-      var white = Array(cellSize+1).join('██');
+      var white = Array(cellSize+1).join('ââ');
       var black = Array(cellSize+1).join('  ');
 
       var ascii = '';
