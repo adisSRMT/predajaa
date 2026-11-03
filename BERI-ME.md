@@ -1,8 +1,13 @@
 # Predaja vozil – navodila za postavitev
 
-Spletna aplikacija za predajo reševalnih vozil: vsako vozilo ima svojo QR kodo, ob skeniranju se odpre obrazec (kdo predaja, kdo prevzema, izmena, ura, kilometrina, gorivo, kisik, defibrilator, pregled opreme, poškodbe, podpisa). Posebej so obvezni **narkotiki** (količina in številka serije), za vsa zdravila pa aplikacija hrani **rok uporabe** in opozori, ko poteče. Napake na vozilih se zbirajo na seznamu. Deluje na telefonu kot aplikacija in tudi brez signala.
+Spletna aplikacija za predajo reševalnih vozil: vsako vozilo ima svojo QR kodo, ob skeniranju se odpre obrazec (kdo predaja, kdo prevzema, izmena, ura, kilometrina, gorivo, kisik, defibrilator, pregled opreme, poškodbe s fotografijami, podpisa). Posebej so obvezni **narkotiki** (količina in številka serije), za vsa zdravila pa aplikacija hrani **rok uporabe** in opozori, ko poteče. Napake na vozilih se zbirajo na seznamu. Deluje na telefonu kot aplikacija in tudi brez signala.
 
-Sta dve vlogi: **skrbnik** vidi vse (Vozila, Napake, Zgodovina, QR kode), **navadni uporabnik** po skeniranju QR kode vidi samo predajo tistega vozila.
+Sta dve vlogi: **skrbnik** vidi vse (Vozila, Napake, Zgodovina, QR kode), **navadni uporabnik** vidi samo predajo vozila: izbere vozilo s seznama ali skenira njegovo QR kodo.
+
+**Prva stran** ima dve izbiri:
+
+- **Skeniraj QR kodo**: odpre kamero v aplikaciji. Ko prebere kodo vozila, se prijaviš z e-pošto (na istem telefonu samo enkrat) in odpre se predaja tega vozila. Sama QR koda **ne spusti** nikogar noter, vedno je potrebna prijava.
+- **Prijava z e-pošto**: po prijavi navadni uporabnik izbere vozilo s seznama ali skenira QR kodo, da neposredno odpre vozilo, za katero piše predajo.
 
 - **Datoteke** živijo na GitHubu in se prikazujejo prek GitHub Pages (brezplačno).
 - **Podatki in prijava** so v Firebase (brezplačni paket Spark, brez kartice).
@@ -55,12 +60,15 @@ Aplikacija se zdaj že odpre, vendar piše, da še ni povezana z bazo. To uredim
 
 ## Korak 4: Pravila baze (varnost)
 
-Pravila določajo, kdo kaj sme: navadni uporabnik lahko odda predajo samo za vozilo, ki ga je skeniral, in ne more brati zgodovine, seznama vozil ali podpisov. Skrbnik lahko vse. Zapisane predaje se ne dajo spremeniti ali izbrisati.
+Pravila določajo, kdo kaj sme: navadni uporabnik vidi seznam vozil in lahko odda predajo (z morebitnimi fotografijami), ne more pa brati zgodovine predaj, podpisov ali fotografij. Skrbnik lahko vse. Zapisane predaje se ne dajo spremeniti ali izbrisati.
 
 1. Firebase → **Firestore Database** → zavihek **Rules**.
 2. Izbriši vse, kar je tam.
 3. Odpri datoteko `firestore.rules` (na GitHubu ali na računalniku, odpre se v Beležnici), **kopiraj vso vsebino** in jo prilepi.
-4. Klikni **Publish**.
+4. V prilepljenem besedilu poišči `skrbnik@primer.si` in to zamenjaj z **e-poštnim naslovom skrbnika**, ki ga boš ustvaril v koraku 6a (samo male črke). Za več skrbnikov naslove ločiš z vejico: `['ana@posta.si', 'janez@posta.si']`. Naslov spremeni **samo tukaj v Firebase**, ne na GitHubu: repozitorij je javen.
+5. Klikni **Publish**.
+
+> **Pozor:** vsakič, ko pravila znova prilepiš (npr. po posodobitvi aplikacije), se v njih vrne `skrbnik@primer.si`. Takrat moraš naslov skrbnika **znova vpisati** pred **Publish**, sicer so vsi uporabniki navadni.
 
 ## Korak 5: Poveži aplikacijo z bazo (config.js)
 
@@ -89,19 +97,13 @@ Pravila določajo, kdo kaj sme: navadni uporabnik lahko odda predajo samo za voz
 
 Računi so lahko osebni (vsak sodelavec svoj, kar je bolje za sledljivost) ali pa en skupni račun za vso ekipo (preprosteje). Za skrbnike naredi osebne račune. Kdo je kdo pri predaji, se vedno vpiše v obrazec (ime oddajnika in prevzemnika, podpisa).
 
-**6b. Določi skrbnika**
+**6b. Skrbnik**
 
-Vsak račun je privzeto **navadni uporabnik**. Skrbnik postane tisti, ki ima v bazi svoj zapis:
+Vsak račun je privzeto **navadni uporabnik**. Skrbnik je tisti, čigar e-poštni naslov si vpisal v pravila (korak 4, točka 4). Če tega še nisi naredil: Firebase → **Firestore Database** → zavihek **Rules** → zamenjaj `skrbnik@primer.si` z naslovom skrbnika (male črke) → **Publish**. Skrbnik se odjavi in se znova prijavi; zdaj vidi zavihke Vozila, Napake, Zgodovina in QR kode, pod imenom pa piše »skrbnik«.
 
-1. Firebase → **Authentication** → **Users**: pri računu skrbnika kopiraj **User UID** (dolga vrsta znakov).
-2. Firebase → **Firestore Database** → zavihek **Data** → **Start collection**.
-3. **Collection ID:** `uporabniki` → **Next**.
-4. **Document ID:** prilepi UID skrbnika.
-5. Polje: **Field** `vloga`, **Type** `string`, **Value** `admin` → **Save**.
+Naslov mora biti **enak** naslovu računa, ustvarjenega v koraku 6a. Novega skrbnika dodaš tako, da v pravilih dodaš njegov naslov na seznam in znova klikneš **Publish**.
 
-Za drugega skrbnika v zbirki `uporabniki` klikni **Add document** in ponovi korake 4 in 5. Skrbnika odstraniš tako, da izbrišeš njegov dokument. Spremembe veljajo ob naslednji prijavi.
-
-> Ta zapis lahko ustvari samo lastnik projekta v Firebase konzoli. Iz aplikacije ga nihče ne more ustvariti ali spremeniti.
+*Druga možnost (ni obvezna):* skrbnik je lahko tudi tisti, ki ima v Firestore zbirki `uporabniki` dokument z ID-jem, enakim njegovemu **User UID** (Authentication → Users), in poljem `vloga` (tip `string`) z vrednostjo `admin`. Ta možnost deluje poleg seznama e-poštnih naslovov.
 
 **6c. Izklopi samostojno registracijo (pomembno)**
 
@@ -122,7 +124,7 @@ Od zdaj lahko račune dodajaš samo ti, v konzoli (6a).
 2. Prijavi se z računom skrbnika (koraka 6a in 6b). Zgoraj morajo biti zavihki Vozila, Napake, Zgodovina, QR kode, pod imenom pa piše »skrbnik«.
 3. **Vozila** → **Dodaj vozilo** → vpiši oznako (npr. `NM-12`), registrsko in enoto.
 4. Klikni **Predaja vozila** in izpolni poskusno predajo. Pri prvi predaji vozila vpišeš rok uporabe vsakega zdravila (glej poglavje Zdravila).
-5. Preizkusi še račun navadnega uporabnika (ali drug brskalnik): po prijavi se ne sme videti nobenega zavihka.
+5. Preizkusi še račun navadnega uporabnika (ali drug brskalnik): po prijavi se ne sme videti nobenega zavihka, vidi pa seznam vozil in gumb **Skeniraj QR kodo**.
 6. **Namesti na telefon:**
    - **Android (Chrome):** meni ⋮ → **Namesti aplikacijo** / **Dodaj na začetni zaslon**.
    - **iPhone (Safari):** gumb **Deli** → **Dodaj na začetni zaslon**. Na iPhonu mora biti odprt Safari.
@@ -133,9 +135,13 @@ Od zdaj lahko račune dodajaš samo ti, v konzoli (6a).
 1. V aplikaciji odpri **QR kode** (zavihek zgoraj).
 2. **Natisni vse QR kode** (natisne se po dve na vrstico) ali pri posameznem vozilu **Prenesi nalepko** (datoteka SVG).
 3. Nalepko prilepi v kabino vozila (zaščiti jo s prozorno folijo).
-4. Sodelavec skenira kodo s kamero telefona. **Ob prvem skeniranju se prijavi (e-pošta in geslo), od takrat ostane prijavljen** in vsako naslednje skeniranje odpre neposredno predajo tistega vozila. Navadni uporabnik ne vidi ničesar drugega: po oddaji predaje vidi potrditev, brez zgodovine, seznama vozil ali QR kod.
+4. Sodelavec kodo prebere na enega od dveh načinov:
+   - **v aplikaciji:** na prvi strani (ali po prijavi) klikne **Skeniraj QR kodo**, telefon prvič vpraša za dovoljenje za kamero. Kodo usmeri v okvir.
+   - **s kamero telefona:** odpre se povezava vozila v brskalniku ali nameščeni aplikaciji.
 
-> Če QR odpre brskalnik namesto nameščene aplikacije, se prijavi tudi tam, nato ostaneš prijavljen.
+   Če še ni prijavljen, vpiše e-pošto in geslo (na istem telefonu **samo enkrat**, potem ostane prijavljen). Nato se odpre neposredno predaja tistega vozila. Po oddaji vidi potrditev in gumba **Skeniraj QR kodo** ali **Izbira vozila**. Zgodovine, podpisov ali QR kod ne vidi.
+
+> Skeniranje v aplikaciji potrebuje dovoljenje za kamero (Nastavitve telefona → brskalnik ali aplikacija → Kamera) in deluje samo na naslovu `https://` (GitHub Pages to je). Če kamera ne deluje, uporabi kamero telefona. Koda iz druge aplikacije ali drugega naslova se zavrne.
 
 ---
 
@@ -143,13 +149,16 @@ Od zdaj lahko račune dodajaš samo ti, v konzoli (6a).
 
 | | Skrbnik | Navadni uporabnik |
 |---|---|---|
-| Predaja vozila (po skeniranju QR) | da | da, samo za skenirano vozilo |
+| Predaja vozila (izbira s seznama ali skeniranje QR) | da | da |
+| Seznam vozil (oznaka, registrska, enota) | da | da, za izbiro vozila |
 | Vozila, Napake, Zgodovina, QR kode | da | ne |
 | Podpisi in zgodovina predaj | da | ne |
 | Dodajanje vozil, zapiranje napak | da | ne |
-| Vpis roka uporabe in narkotikov pri predaji | da | da |
+| Vpis roka uporabe, količine in narkotikov pri predaji | da | da |
+| Dodajanje fotografij poškodb pri predaji | da | da |
+| Ogled fotografij poškodb | da | ne |
 
-To ni samo skrito v meniju. Pravila baze (korak 4) teh podatkov navadnemu uporabniku sploh ne dovolijo prebrati.
+To ni samo skrito v meniju. Pravila baze (korak 4) zgodovine, podpisov in fotografij navadnemu uporabniku sploh ne dovolijo prebrati.
 
 ## Zdravila in narkotiki
 
@@ -167,7 +176,24 @@ Seznam zdravil je v datoteki **oprema.js**, pod `ZDRAVILA` (na vrhu je navodilo)
 
 Skrbnik vidi roke vseh zdravil pri vozilu (**Vozila** → **Podrobnosti**), na kartici vozila pa številko zdravil, ki ta mesec potečejo ali so že potekla.
 
+**Količina zdravil (po potrebi).** Pri zdravilu, kjer želiš pri vsaki predaji vpisati tudi količino, v `oprema.js` dodaj tretji del:
+
+```js
+['adrenalin', 'Adrenalin', { kolicina: true }],
+```
+
+Količino pri vseh zdravilih v skupini vklopiš tako, da skupini dodaš `kolicina: true` (zraven `id` in `naziv`). Pri zdravilih z vklopljeno količino se po izbiri **V redu** pokaže obvezno polje **Količina** (celo število, aplikacija pokaže tudi, kaj je bilo vpisano zadnjič). Količina se zapiše v predajo in jo skrbnik vidi pri vozilu in v zgodovini. Rok uporabe deluje enako kot prej. V priloženem seznamu imata količino adrenalin in naloksan, kot primer. Pri narkotikih sta količina in številka serije vedno obvezni.
+
 **Urejanje seznama.** Na GitHubu odpri `oprema.js` → svinčnik → pod `ZDRAVILA` kopiraj vrstico zdravila in spremeni besedilo (`['id', 'Naziv']`). Novo skupino narkotikov naredi s kopijo skupine Narkotiki (zraven `narkotik: true`). Id naj bo kratek, brez presledkov, šumnikov in podčrtajev. Seznam v datoteki je **primer**, zamenjaj ga s svojim.
+
+## Fotografije poškodb
+
+Pri **Poškodbe in opombe** se, ko uporabnik vpiše poškodbo karoserije, pokaže **Dodaj fotografijo** (do 3 fotografije na predajo, s kamero ali iz galerije). Fotografija se pred pošiljanjem pomanjša (najdaljša stran 1280 točk) in stisne, da ostane pod okoli 0,2 MB. Opis poškodbe je pri fotografijah obvezen. Fotografije vidi samo skrbnik: **Zgodovina** → predaja → **Fotografije poškodb**; klik na fotografijo jo poveča.
+
+- Fotografije so shranjene v bazi (zbirka `fotke`), ne v Firebase Storage. Storage je namreč plačljiv del Firebasea, aplikacija pa mora ostati brezplačna.
+- Brezplačna shramba baze je približno 1 GiB. Predaja s tremi fotografijami zasede do okoli 0,7 MB, običajno precej manj. Če kdaj zmanjka prostora, stare fotografije izbrišeš v Firebase → **Firestore Database** → zbirka `fotke`.
+- Brez signala se fotografije shranijo skupaj s predajo in se pošljejo, ko je povezava spet tam.
+- Ne fotografiraj pacientov in njihovih podatkov. Fotografije so samo za poškodbe vozila.
 
 ## Vsakdanje spremembe
 
@@ -193,15 +219,15 @@ Vozilo → **Podrobnosti** → **Skrij vozilo**. Zgodovina ostane. Skrita vozila
 
 Če si prejšnjo različico že postavil:
 
-1. Zip razpakiraj in iz mape **izbriši `config.js`**, da ne prepišeš svojih nastavitev. Če si urejal `oprema.js`, izbriši tudi to datoteko in dodaj novo skupino `ZDRAVILA` ročno (glej poglavje Zdravila).
+1. Zip razpakiraj in iz mape **izbriši `config.js`**, da ne prepišeš svojih nastavitev. Če si urejal `oprema.js`, izbriši tudi to datoteko. Količino pri zdravilih dodaš ročno (glej poglavje Zdravila). Nove datoteke tega koraka so `skener.js`, `jsqr.js` in `LICENSE-jsqr.txt`, naloži jih skupaj z ostalimi.
 2. Na GitHubu: **Add file** → **Upload files** → povleci preostale datoteke → **Commit changes** (obstoječe se prepišejo).
-3. Korak 4: v Firebase **objavi nova pravila** (`firestore.rules`).
-4. Korak 6b: določi skrbnika. Dokler tega ne narediš, so vsi uporabniki navadni in ne vidijo zavihkov.
+3. Korak 4: v Firebase **objavi nova pravila** (`firestore.rules`). Nova pravila dovolijo navadnemu uporabniku seznam vozil in oddajo fotografij. Brez njih seznam vozil in fotografije ne delujejo.
+4. Korak 4, točka 4 in korak 6b: v pravilih **znova vpiši** e-poštni naslov skrbnika. Dokler tega ne narediš, so vsi uporabniki navadni in ne vidijo zavihkov.
 5. Napake, ki so bile odprte v stari različici, se v novi ne prikažejo (shranjevanje napak se je spremenilo). Če si vnašal samo poskusne podatke, jih izbriši v Firestore Database (zbirke `vozila`, `predaje`, `podpisi`, `napake`) in začni znova.
 
 ## Brezplačne omejitve (Firebase Spark)
 
-Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–5 zapisov, zato to za običajno službo zadošča z veliko rezerve. Če omejitev kdaj dosežeš, aplikacija to pokaže na vrhu in spet deluje naslednji dan. Plačljivi paket ni vključen in se ne vklopi sam.
+Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–6 zapisov (fotografije so še en zapis), zato to za običajno službo zadošča z veliko rezerve. Če omejitev kdaj dosežeš, aplikacija to pokaže na vrhu in spet deluje naslednji dan. Plačljivi paket ni vključen in se ne vklopi sam.
 
 ## Težave
 
@@ -212,11 +238,15 @@ Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–
 | »Napačen e-poštni naslov ali geslo« | Uporabnik ni ustvarjen (korak 6a) ali pa je napaka v naslovu. |
 | »Baza ne dovoli dostopa« / »Zapis ni dovoljen« | Pravila niso objavljena (korak 4). |
 | Prijava javi `unauthorized-domain` | Korak 6d. |
-| Skrbnik ne vidi zavihkov | Dokument v zbirki `uporabniki` manjka ali ima napačen UID, polje `vloga` ni točno `admin` (korak 6b). Odjavi se in se prijavi znova. |
+| Skrbnik ne vidi zavihkov | E-poštni naslov v pravilih ni enak naslovu računa (male črke, brez presledkov) ali pravila niso objavljena (korak 4 in 6b). Odjavi se in se prijavi znova. |
 | Navadni uporabnik vidi napako »Baza ne dovoli dostopa« | Pravila v Firebase niso nova različica (korak 4). |
 | Zdravilo ne sprejme roka | Rok mora biti mesec in leto, ki še nista pretekla (npr. 03/2027). |
 | Po spremembi se ne vidi nova različica | Aplikacijo zapri in jo odpri še enkrat (z internetom). |
 | QR koda odpre napačen naslov | QR kode vedno natisni iz aplikacije, odprte na pravem naslovu (`https://....github.io/predaja-vozil/`), ne z drugega naslova ali iz računalniške datoteke. |
+| Skeniranje: »Dostop do kamere ni dovoljen« | Dovoli kamero za to stran ali aplikacijo v nastavitvah telefona (brskalnik → nastavitve spletnega mesta → Kamera). Do takrat uporabi kamero telefona. |
+| Skeniranje: »Ta QR koda ni iz te aplikacije« | Koda je za drug naslov. Natisni kodo znova iz aplikacije (korak 8). |
+| Seznam vozil se ne naloži ali piše »Baza ne dovoli dostopa« | Nova pravila še niso objavljena (korak 4). |
+| Fotografija se ne doda | Dovoljene so slike (JPG, PNG). Največ 3 na predajo. Pri težavi izberi drugo fotografijo ali jo posnemi znova. |
 | Predaja je ostala na »Pošiljam …« | Telefon še nima povezave. Ko jo dobi, se pošlje sama; aplikacija naj ostane odprta nekaj sekund. |
 
 ## Seznam datotek
@@ -230,4 +260,4 @@ Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–
 | `sw.js`, `manifest.webmanifest` | namestitev na telefon in delovanje brez signala |
 | `icon*.png`, `icon.svg`, `apple-touch-icon.png`, `favicon-32.png` | ikona aplikacije |
 | `qrcode.js`, `LICENSE-qrcode.txt` | izdelava QR kod (knjižnica qrcode-generator, licenca MIT) |
-
+| `skener.js`, `jsqr.js`, `LICENSE-jsqr.txt` | branje QR kod s kamero v aplikaciji (knjižnica jsQR, licenca Apache 2.0) |
