@@ -80,6 +80,14 @@ export const SKUPINE = [
 //  Vsaka postavka je par: ['id', 'Naziv']. Id naj bo kratek, brez
 //  presledkov, šumnikov in podčrtajev.
 //
+//  KOLIČINA (po potrebi): pri zdravilu, kjer želiš pri vsaki predaji
+//  vpisati tudi količino, dodaj tretji del:
+//      ['adrenalin', 'Adrenalin', { kolicina: true }],
+//  Če želiš količino pri vseh zdravilih v skupini, dodaj skupini
+//      kolicina: true
+//  (zraven id in naziv). Pri narkotikih sta količina in številka serije
+//  vedno obvezni.
+//
 //  PRIMER: spodnji seznam zamenjaj z zdravili, ki jih imate na vozilih.
 // ======================================================================
 export const ZDRAVILA = [
@@ -89,13 +97,13 @@ export const ZDRAVILA = [
     ['midazolam', 'Midazolam']
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
-    ['adrenalin', 'Adrenalin'],
+    ['adrenalin', 'Adrenalin', { kolicina: true }],
     ['amiodaron', 'Amiodaron'],
     ['atropin', 'Atropin'],
     ['aspirin', 'Acetilsalicilna kislina'],
     ['glukoza', 'Glukoza'],
     ['hidrokortizon', 'Hidrokortizon'],
-    ['naloksan', 'Naloksan'],
+    ['naloksan', 'Naloksan', { kolicina: true }],
     ['nitro', 'Nitroglicerin'],
     ['salbutamol', 'Salbutamol']
   ]}
