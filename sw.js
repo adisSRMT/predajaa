@@ -1,6 +1,6 @@
- Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
-const CACHE = 'predaja-v2';
-const CORE = ['./', 'index.html', 'app.css', 'app.js', 'store.js', 'config.js', 'oprema.js', 'qrcode.js',
+/ Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
+const CACHE = 'predaja-v3';
+const CORE = ['./', 'index.html', 'app.css', 'app.js', 'store.js', 'config.js', 'oprema.js', 'qrcode.js', 'skener.js', 'jsqr.js',
   'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', function (e) {
