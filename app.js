@@ -1054,5 +1054,4 @@ function init() {
     fatal('Ni povezave', 'Aplikacije ni bilo mogoče naložiti. Če jo odpiraš prvič, potrebuješ internet. Po prvem odprtju deluje tudi brez povezave.');
   });
 }
-init();}
 init();

@@ -2,7 +2,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore,
-  collection, doc, query, where, orderBy, limit, onSnapshot, setDoc, updateDoc, getDoc, writeBatch, deleteField
+  collection, doc, query, where, orderBy, limit, onSnapshot, setDoc, updateDoc, getDoc, writeBatch, deleteField, getDocsFromServer
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 
@@ -22,6 +22,7 @@ export function connect(config) {
       where: function (f, o, v) { return mkQuery(path, cons.concat([where(f, o, v)])); },
       orderBy: function (f, d) { return mkQuery(path, cons.concat([orderBy(f, d || 'asc')])); },
       limit: function (n) { return mkQuery(path, cons.concat([limit(n)])); },
+      getServer: function () { return getDocsFromServer(q).then(wrapSnap); },
       onSnapshot: function (next, err) { return onSnapshot(q, function (s) { next(wrapSnap(s)); }, err); }
     };
   }
