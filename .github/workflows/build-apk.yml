@@ -57,9 +57,13 @@ jobs:
           echo "Built: $UNSIGNED"
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)
           if [ -n "${KS_B64:-}" ] && [ -n "${KS_PASS_SECRET:-}" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             KS="$RUNNER_TEMP/release.keystore"
-            export KS_PASS="$KS_PASS_SECRET"
+            export KS_PASS="$(printf '%s' "$KS_PASS_SECRET" | tr -d '[:space:]')"
+            if ! printf '%s' "$KS_B64" | python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' > "$KS" 2>/dev/null \
+               || ! keytool -list -keystore "$KS" -storepass "$KS_PASS" -alias predaja > /dev/null 2>&1; then
+              echo "::error::The signing secrets are not valid. ANDROID_KEYSTORE_BASE64 must be the COMPLETE long line from PRIVATE-signing-key.txt and ANDROID_KEYSTORE_PASSWORD the password. Re-create both secrets under Settings > Secrets and variables > Actions, or delete both to build with a throw-away key."
+              exit 1
+            fi
             echo "Signing with your own key."
           else
             echo "::warning::No signing secrets found, so the APK is signed with a throw-away key. Later builds cannot update this install (colleagues would have to uninstall first). See APK-INSTRUCTIONS.md, step 2."
