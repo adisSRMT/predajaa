@@ -59,9 +59,16 @@ jobs:
           if [ -n "${KS_B64:-}" ] && [ -n "${KS_PASS_SECRET:-}" ]; then
             KS="$RUNNER_TEMP/release.keystore"
             export KS_PASS="$(printf '%s' "$KS_PASS_SECRET" | tr -d '[:space:]')"
-            if ! printf '%s' "$KS_B64" | python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' > "$KS" 2>/dev/null \
-               || ! keytool -list -keystore "$KS" -storepass "$KS_PASS" -alias predaja > /dev/null 2>&1; then
-              echo "::error::The signing secrets are not valid. ANDROID_KEYSTORE_BASE64 must be the COMPLETE long line from PRIVATE-signing-key.txt and ANDROID_KEYSTORE_PASSWORD the password. Re-create both secrets under Settings > Secrets and variables > Actions, or delete both to build with a throw-away key."
+            B64CLEAN="$(printf '%s' "$KS_B64" | tr -d '[:space:]')"
+            echo "Secret check: key text is ${#B64CLEAN} characters, starts with '${B64CLEAN:0:4}', ends with '${B64CLEAN: -2}'; password is ${#KS_PASS} characters"
+            OK=1
+            if ! printf '%s' "$B64CLEAN" | python3 -c 'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.read()))' > "$KS" 2> "$RUNNER_TEMP/b64.err"; then
+              echo "Key text problem: $(tail -n1 "$RUNNER_TEMP/b64.err")"; OK=0
+            elif ! keytool -list -keystore "$KS" -storepass "$KS_PASS" -alias predaja > "$RUNNER_TEMP/kt.out" 2>&1; then
+              echo "Keystore problem: $(tail -n2 "$RUNNER_TEMP/kt.out" | tr '\n' ' ')"; OK=0
+            fi
+            if [ "$OK" != 1 ]; then
+              echo "::error::The signing secrets are not valid (details in the lines above). ANDROID_KEYSTORE_BASE64 must be the COMPLETE long line from PRIVATE-signing-key.txt and ANDROID_KEYSTORE_PASSWORD the password. Fix both secrets under Settings > Secrets and variables > Actions, or delete both to build with a throw-away key."
               exit 1
             fi
             echo "Signing with your own key."
@@ -69,6 +76,7 @@ jobs:
             echo "::warning::No signing secrets found, so the APK is signed with a throw-away key. Later builds cannot update this install (colleagues would have to uninstall first). See APK-INSTRUCTIONS.md, step 2."
             export KS_PASS="$(openssl rand -hex 16)"
             KS="$RUNNER_TEMP/temp.keystore"
+            rm -f "$KS"
             keytool -genkeypair -keystore "$KS" -alias predaja -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass "$KS_PASS" -keypass "$KS_PASS" -dname "CN=Predaja vozil"
           fi
