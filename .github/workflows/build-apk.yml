@@ -62,7 +62,7 @@ jobs:
             export KS_PASS="$KS_PASS_SECRET"
             echo "Signing with your own key."
           else
-            echo "::warning::No signing secrets found, so the APK is signed with a throw-away key. Later builds cannot update this install (colleagues would have to uninstall first). See APK-INSTRUCTIONS.md, step 2.""
+            echo "::warning::No signing secrets found, so the APK is signed with a throw-away key. Later builds cannot update this install (colleagues would have to uninstall first). See APK-INSTRUCTIONS.md, step 2."
             export KS_PASS="$(openssl rand -hex 16)"
             KS="$RUNNER_TEMP/temp.keystore"
             keytool -genkeypair -keystore "$KS" -alias predaja -keyalg RSA -keysize 2048 -validity 10000 \
