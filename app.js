@@ -478,10 +478,10 @@ function buildForm(v) {
     numField('km', 'Kilometrina', 'km', z.km != null ? '<span class="hint" id="kmhint">Ob zadnji predaji: ' + nf(z.km) + ' km</span>' : '') +
     '<div class="field" data-field="gorivo"><span class="lbl">Gorivo</span>' + segHTML('gorivo', GORIVO, draft.gorivo) + (z.gorivo ? '<span class="hint">Ob zadnji predaji: ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + '</div></section>';
   h += '<section class="card stack"><h2>Kisik in baterija</h2><div class="grid2">' +
-    numField('kisik.stac', 'Stacionarna jeklenka', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
-    numField('kisik.prenosna', 'Prenosna jeklenka', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
-    numField('kisik.rezerva', 'Rezervna jeklenka (neobvezno)', 'bar') +
-    numField('defi', 'Baterija defibrilatorja', '%') + '</div></section>';
+    numField('kisik.stac', 'Kisik 1', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
+    numField('kisik.prenosna', 'Kisik 2', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
+    numField('kisik.rezerva', 'Prenosni kisik', 'bar') +
+    numField('defi', 'Baterija lifepaka', '%') + '</div></section>';
   var nar = ZDR.filter(function (g) { return g.narkotik; }), zdr = ZDR.filter(function (g) { return !g.narkotik; });
   if (nar.length) h += '<div class="stack">' + nar.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
   h += '<div class="stack"><h2>Pregled vozila in opreme</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
@@ -527,10 +527,10 @@ function validate() {
   if (String(d.km).trim() === '' || isNaN(km) || km < 0) add('km', 'Vpiši kilometrino');
   else if (z.km != null && km < z.km) add('km', 'Kilometrina je manjša kot ob zadnji predaji (' + nf(z.km) + ' km)');
   if (!d.gorivo) add('gorivo', 'Izberi nivo goriva');
-  num('kisik.stac', 'tlak stacionarne jeklenke', 0, 400, true);
-  num('kisik.prenosna', 'tlak prenosne jeklenke', 0, 400, true);
-  num('kisik.rezerva', 'tlak rezervne jeklenke', 0, 400, false);
-  num('defi', 'baterija defibrilatorja', 0, 100, true);
+  num('kisik.stac', 'tlak kisik 1', 0, 400, true);
+  num('kisik.prenosna', 'tlak kisik 2', 0, 400, true);
+  num('kisik.rezerva', 'tlak prenosne jeklenke', 0, 400, false);
+  num('defi', 'baterija lifepaka', 0, 100, true);
   /* rok uporabe: vrne sporočilo ali '' */
   function rokProblem(k) {
     var e = medEff(v, k), zz = d.zd[k];
