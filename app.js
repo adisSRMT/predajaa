@@ -156,6 +156,7 @@ function updateNotice() {
 }
 function setChrome(loggedIn) {
   $('#nav').hidden = !(loggedIn && S.admin); $('#logout').hidden = !loggedIn;
+  var hn = $('#hdr-nmp'); if (hn) hn.hidden = !loggedIn;
   $('#who').textContent = loggedIn && S.user ? (S.user.email || '') + (S.admin ? ' · skrbnik' : '') : '';
 }
 function onRoute() {
@@ -313,20 +314,16 @@ function vSig(v) { return JSON.stringify([v.zadnja && v.zadnja.id, v.zdravila ||
 
 /* --- fotografije poškodb: pomanjšane in shranjene v bazo (Firebase Storage je plačljiv) --- */
 var MAX_FOTO = 3, MAX_FOTO_ZNAKOV = 230000;
-/* Android aplikacija (APK) v brskalniku doda oznako PredajaVozilApp. V običajnem brskalniku je NATIVE false. */
-var NATIVE = /PredajaVozilApp/.test(navigator.userAgent || '');
 function thumbsHTML() { return draft.foto.map(function (s, i) { return '<div class="thumb"><img src="' + esc(s) + '" alt="Fotografija ' + (i + 1) + '"><button type="button" data-act="foto-del" data-i="' + i + '" aria-label="Odstrani fotografijo ' + (i + 1) + '">×</button></div>'; }).join(''); }
 function fotoHTML() {
   return '<div class="field" id="foto-box"' + (draft.poskodbe.trim() || draft.foto.length ? '' : ' hidden') + '><span class="lbl">Fotografije poškodb (neobvezno, do ' + MAX_FOTO + ')</span><div class="thumbs" id="thumbs">' + thumbsHTML() + '</div>' +
-    (NATIVE ? '<button type="button" class="btn secondary small" id="foto-cam-btn" data-act="foto-cam" style="align-self:flex-start"' + (draft.foto.length >= MAX_FOTO ? ' hidden' : '') + '>Posnemi fotografijo</button><input id="foto-cam" type="file" accept="image/*" capture="environment" hidden>' : '') +
-    '<button type="button" class="btn secondary small" id="foto-btn" data-act="foto-add" style="align-self:flex-start"' + (draft.foto.length >= MAX_FOTO ? ' hidden' : '') + '>' + (NATIVE ? 'Izberi iz galerije' : 'Dodaj fotografijo') + '</button><input id="foto-in" type="file" accept="image/*" multiple hidden>' +
+    '<button type="button" class="btn secondary small" id="foto-btn" data-act="foto-add" style="align-self:flex-start"' + (draft.foto.length >= MAX_FOTO ? ' hidden' : '') + '>Dodaj fotografijo</button><input id="foto-in" type="file" accept="image/*" multiple hidden>' +
     '<span class="hint">Fotografije se pomanjšajo in shranijo skupaj s predajo.</span></div>';
 }
 function showFotoBox() { var b = $('#foto-box'); if (b && draft) b.hidden = !(draft.poskodbe.trim() || draft.foto.length); }
 function updateFotoBox() {
   if (!draft) return; showFotoBox();
   var btn = $('#foto-btn'); if (btn) btn.hidden = draft.foto.length >= MAX_FOTO;
-  var cbtn = $('#foto-cam-btn'); if (cbtn) cbtn.hidden = draft.foto.length >= MAX_FOTO;
   var t = $('#thumbs'); if (t) t.innerHTML = thumbsHTML();
 }
 function resizeImage(file) {
@@ -860,7 +857,7 @@ function downloadSvg(name, svg) {
 views.qr = {
   mount: function () {
     A.innerHTML = '<div class="stack"><h1 class="noprint">QR kode</h1><p class="hint noprint">Vsako vozilo ima svojo QR kodo. Natisni jo in jo prilepi v kabino; telefon jo prebere s kamero in odpre predajo tega vozila.</p>' +
-      (NATIVE ? '<p class="hint noprint">Tiskanje in prenos nalepk v Android aplikaciji nista na voljo. QR kode natisni iz spletne različice (v brskalniku).</p>' : '<div class="actions noprint"><button type="button" class="btn primary" data-act="print">Natisni vse QR kode</button></div>') + '<div id="qgrid" class="qrgrid"></div></div>';
+      '<div class="actions noprint"><button type="button" class="btn primary" data-act="print">Natisni vse QR kode</button></div><div id="qgrid" class="qrgrid"></div></div>';
   },
   update: function () {
     var g = $('#qgrid'); if (!g) return;
@@ -869,7 +866,7 @@ views.qr = {
     if (!act.length) { g.innerHTML = '<div class="card empty" style="grid-column:1/-1"><h2>Še ni vozil</h2><p>Najprej dodaj vozilo pod »Vozila«.</p></div>'; return; }
     g.innerHTML = act.map(function (v) {
       var link = vehLink(v), svg = qrSvg(link);
-      return '<article class="card qrcard"><b class="oznaka" style="font-size:26px;text-align:center">' + esc(v.oznaka) + '</b>' + (svg || '<p class="hint">QR koda se ni ustvarila. Uporabi povezavo spodaj.</p>') + '<div class="qrcap">Predaja vozila</div><div class="qrlink">' + esc(link) + '</div><div class="actions noprint">' + (svg && !NATIVE ? '<button type="button" class="btn secondary small" data-act="qr-save" data-id="' + esc(v.id) + '">Prenesi nalepko</button>' : '') + '<button type="button" class="btn secondary small" data-act="qr-copy" data-id="' + esc(v.id) + '">Kopiraj povezavo</button></div></article>';
+      return '<article class="card qrcard"><b class="oznaka" style="font-size:26px;text-align:center">' + esc(v.oznaka) + '</b>' + (svg || '<p class="hint">QR koda se ni ustvarila. Uporabi povezavo spodaj.</p>') + '<div class="qrcap">Predaja vozila</div><div class="qrlink">' + esc(link) + '</div><div class="actions noprint">' + (svg ? '<button type="button" class="btn secondary small" data-act="qr-save" data-id="' + esc(v.id) + '">Prenesi nalepko</button>' : '') + '<button type="button" class="btn secondary small" data-act="qr-copy" data-id="' + esc(v.id) + '">Kopiraj povezavo</button></div></article>';
     }).join('');
   }
 };
@@ -898,7 +895,7 @@ A.addEventListener('input', function (e) {
 A.addEventListener('change', function (e) {
   var t = e.target;
   if (t.id === 'fv') { S.filterV = t.value; views.zgodovina.update(); }
-  else if ((t.id === 'foto-in' || t.id === 'foto-cam') && draft) { var fs = Array.prototype.slice.call(t.files || []); t.value = ''; if (fs.length) { touched = true; addPhotos(fs); } }
+  else if (t.id === 'foto-in' && draft) { var fs = Array.prototype.slice.call(t.files || []); t.value = ''; if (fs.length) { touched = true; addPhotos(fs); } }
   else if (t.dataset && t.dataset.zd && draft && t.dataset.zd.split('|')[1] === 'rok') {
     var k = t.dataset.zd.split('|')[0]; draft.zd[k].rok = t.value; refreshMed(k);
   }
@@ -947,7 +944,6 @@ A.addEventListener('click', function (e) {
   else if (a === 'login-email') { showLogin('email'); }
   else if (a === 'login-back') { try { history.replaceState(null, '', location.pathname + location.search); } catch (x) { } showLogin('choice'); }
   else if (a === 'foto-add') { var fi = $('#foto-in'); if (fi) fi.click(); }
-  else if (a === 'foto-cam') { var fc = $('#foto-cam'); if (fc) fc.click(); }
   else if (a === 'foto-del' && draft) { draft.foto.splice(Number(b.dataset.i), 1); updateFotoBox(); saveSoon(); }
   else if (a === 'foto-big') { var fl = S.detailFoto[b.dataset.id]; if (fl && fl.slike && fl.slike[Number(b.dataset.i)]) openLightbox(fl.slike[Number(b.dataset.i)]); }
   else if (a === 'hide' || a === 'unhide') {
@@ -997,7 +993,7 @@ function showLogin(mode, note) {
   var explicit = !!mode;
   if (!mode) mode = withCar ? 'email' : 'choice';
   if (mode === 'email' && !note && withCar) note = 'Prijavi se, da odpreš predajo vozila.';
-  var h = '<div class="login card stack"><img class="logo" src="icon-192.png" alt="">';
+  var h = '<div class="login card stack"><img class="logo-nmp" src="logo-nmp.png" alt="Nujna medicinska pomoč Slovenija" width="132" height="132">';
   if (mode === 'choice') {
     h += '<h1>Predaja vozila</h1><p class="hint">Izberi, kako želiš nadaljevati.</p><div class="choice">' +
       '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button>' +
@@ -1011,7 +1007,7 @@ function showLogin(mode, note) {
       '<button type="button" class="btn secondary small" data-act="login-back" style="align-self:flex-start">← Nazaj</button>';
   }
   A.innerHTML = h + '</div>';
-  if (mode === 'email' && (explicit || note)) setTimeout(function () { var e = $('#l-email'); if (e && !S.user) e.focus(); }, 0);
+  if (mode === 'email' && (explicit || note)) { var fe = $('#l-email'); if (fe) fe.focus(); }
 }
 function fatal(title, text) { setChrome(false); A.innerHTML = '<div class="card stack"><h2>' + esc(title) + '</h2><p>' + text + '</p></div>'; }
 function registerSW() {
