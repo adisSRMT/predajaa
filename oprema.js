@@ -50,7 +50,7 @@ export const SKUPINE = [
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
     ['opornice', 'Vratne opornice'],
     ['vakuum', 'Vakuumske blazine'],
-    ['splint', 'EasySplint']
+    ['splint', 'EasySplint'],
     ['pasovi', 'Pasovi']
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
