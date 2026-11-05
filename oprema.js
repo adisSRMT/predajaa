@@ -19,7 +19,7 @@ export const SKUPINE = [
     ['gume', 'Gume'],
     ['luci', 'Luči in modre luči'],
     ['sirena', 'Sirena'],
-    ['cistoca', 'Čistoča in razkuževanje']
+    ['cistoca', 'Čistoča']
   ]},
   { id: 'kabina', naziv: 'Kabina', postavke: [
     ['radio', 'Radio in telefon'],
@@ -29,33 +29,33 @@ export const SKUPINE = [
     ['kartica', 'Kartica za gorivo']
   ]},
   { id: 'nosila', naziv: 'Nosila in transport', postavke: [
-    ['glavna', 'Glavna nosila'],
-    ['stol', 'Stol za prenos'],
-    ['vakuum', 'Vakuumska blazina'],
-    ['pasovi', 'Pasovi']
+    ['glavna', 'Električna nosila'],
+    ['stol', 'Kardiostol'],
   ]},
   { id: 'dihala', naziv: 'Dihala', postavke: [
     ['aspirator', 'Aspirator'],
-    ['ambu', 'Ambu mehur in maske'],
+    ['ambu', 'AMBU maska'],
     ['dihpot', 'Pripomočki za dihalno pot'],
-    ['kisikmaske', 'Kisikove maske in cevke']
+    ['kisikmaske', 'Kisikove maske in cevke'],
   ]},
-  { id: 'srce', naziv: 'Srce', postavke: [
+  { id: 'lifepak', naziv: 'LIFEPAK 15', postavke: [
     ['defi', 'Defibrilator (samotest OK)'],
     ['elektrode', 'Elektrode (rok uporabe)'],
     ['ekg', 'EKG-kabli']
   ]},
   { id: 'infuzije', naziv: 'Infuzije', postavke: [
     ['raztopine', 'Infuzijske raztopine (rok, količina)'],
-    ['kanile', 'Kanile in sistemi']
+    ['kanile', 'Kanile']
   ]},
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
-    ['opornice', 'Opornice'],
-    ['ovratnice', 'Ovratnice']
+    ['opornice', 'Vratne opornice'],
+    ['vakuum', 'Vakuumske blazine'],
+    ['splint', 'EasySplint']
+    ['pasovi', 'Pasovi']
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
     ['povoji', 'Povoji in obliži'],
-    ['hemostatiki', 'Hemostatiki (rok uporabe)']
+    ['saniteta', 'Sanitetni material']
   ]},
   { id: 'zascita', naziv: 'Zaščita', postavke: [
     ['rokavice', 'Rokavice in maske'],
@@ -92,22 +92,42 @@ export const SKUPINE = [
 // ======================================================================
 export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
-    ['morfin', 'Morfin'],
+    ['morfij', 'Morfij'],
     ['fentanil', 'Fentanil'],
-    ['midazolam', 'Midazolam']
+    ['piritramid', 'Dipidolor/piritramid']
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
     ['adrenalin', 'Adrenalin', { kolicina: true }],
     ['amiodaron', 'Amiodaron'],
+    ['adenozin', 'Adenozin'],
+    ['diazepam', 'Diazepam/Apaurin'],
+    ['ketamin', 'Ketamin'],
     ['atropin', 'Atropin'],
-    ['aspirin', 'Acetilsalicilna kislina'],
+    ['aspirin', 'Aspirin'],
+    ['metoklopramid', 'Reglan'],
+    ['digoxin', 'Digoksin'],
     ['glukoza', 'Glukoza'],
-    ['hidrokortizon', 'Hidrokortizon'],
-    ['naloksan', 'Naloksan', { kolicina: true }],
-    ['nitro', 'Nitroglicerin'],
-    ['salbutamol', 'Salbutamol']
+    ['urapidil', 'Ebrantil'],
+    ['furosemid', 'Furosemid/lasix'],
+    ['rokuronij', 'Esmeron'],
+    ['etomidat', 'Etomidat'],
+    ['granisetron', 'Granisetron'],
+    ['heparin', 'Heparin'],
+    ['haloperidol', 'Haldol'],
+    ['midazolam', 'Midazolam', { kolicina: true }],
+    ['propofol', 'Propofol', { kolicina: true }],
+    ['metoprolol', 'Metoprolol'],
+    ['hidrokortizon', 'SoluCortef'],
+    ['tavegyl', 'Tavegyl'],
+    ['tietilpip', 'Torecan'],
+    ['tramadol', 'Tramal'],
+    ['metilpredi', 'SoluMedrol'],
+    ['nalokson', 'Nalokson', { kolicina: true }],
+    ['nitro', 'Nitroglingual'],
+    ['salbutamol', 'Ventolin'],
+    ['traneks', 'Trenolk']
   ]}
 ];
 
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+export const IZMENE = ['Dnevna', 'Nočna'];
