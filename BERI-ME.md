@@ -268,3 +268,9 @@ Dnevno približno 20.000 zapisov in 50.000 branj. Ena predaja je približno 3–
 | `logo-zd.png`, `logo-zd-light.png`, `logo-nmp.png` | logotipi: Zdravstveni dom Brežice (zgoraj levo; `logo-zd.png` je za temen način, `logo-zd-light.png` za svetel način) in Nujna medicinska pomoč (na prvi strani in zgoraj levo po prijavi) |
 | `qrcode.js`, `LICENSE-qrcode.txt` | izdelava QR kod (knjižnica qrcode-generator, licenca MIT) |
 | `skener.js`, `jsqr.js`, `LICENSE-jsqr.txt` | branje QR kod s kamero v aplikaciji (knjižnica jsQR, licenca Apache 2.0) |
+
+## Oprema po vozilu in predaja ambulante
+
+**Vsako vozilo svoja oprema.** V `oprema.js` je pod naslovom »RAZLIKE MED VOZILI« prostor, kjer za vsako vozilo (po oznaki, npr. `NM-12`) vpišeš, česa nima (`brez`) ali kaj ima dodatno (`dodaj`, `dodajZdravila`). Vozila brez vnosa imajo standardni seznam. Primer je napisan v komentarju.
+
+**Predaja ambulante.** Pri »Dodaj vozilo« izberi vrsto **Ambulanta**. Ambulanta ima svojo QR kodo, svoj seznam (`AMBULANTA` v `oprema.js`: čistoča, računalnik, hladilnik, odvzem krvi, infuzije, rokavice S/M/L, medicinska oprema, narkotiki, zdravila, tablete) in nima kilometrine, goriva ter kisika. Vrste ne moreš spremeniti pri že dodanem vozilu; dodaj novo ambulanto.

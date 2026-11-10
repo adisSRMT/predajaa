@@ -1,5 +1,5 @@
 // Service worker: shrani aplikacijo v telefon, da se odpre tudi brez signala.
-const CACHE = 'predaja-v4';
+const CACHE = 'predaja-v5';
 const CORE = ['./', 'index.html', 'app.css', 'app.js', 'store.js', 'config.js', 'oprema.js', 'qrcode.js', 'skener.js', 'jsqr.js',
   'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'logo-zd.png', 'logo-zd-light.png', 'logo-nmp.png'];
 

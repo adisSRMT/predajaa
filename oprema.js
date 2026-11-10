@@ -19,7 +19,7 @@ export const SKUPINE = [
     ['gume', 'Gume'],
     ['luci', 'Luči in modre luči'],
     ['sirena', 'Sirena'],
-    ['cistoca', 'Čistoča']
+    ['cistoca', 'Čistoča in razkuževanje']
   ]},
   { id: 'kabina', naziv: 'Kabina', postavke: [
     ['radio', 'Radio in telefon'],
@@ -29,33 +29,33 @@ export const SKUPINE = [
     ['kartica', 'Kartica za gorivo']
   ]},
   { id: 'nosila', naziv: 'Nosila in transport', postavke: [
-    ['glavna', 'Električna nosila'],
-    ['stol', 'Kardiostol'],
+    ['glavna', 'Glavna nosila'],
+    ['stol', 'Stol za prenos'],
+    ['vakuum', 'Vakuumska blazina'],
+    ['pasovi', 'Pasovi']
   ]},
   { id: 'dihala', naziv: 'Dihala', postavke: [
     ['aspirator', 'Aspirator'],
-    ['ambu', 'AMBU maska'],
+    ['ambu', 'Ambu mehur in maske'],
     ['dihpot', 'Pripomočki za dihalno pot'],
-    ['kisikmaske', 'Kisikove maske in cevke'],
+    ['kisikmaske', 'Kisikove maske in cevke']
   ]},
-  { id: 'lifepak', naziv: 'LIFEPAK 15', postavke: [
+  { id: 'srce', naziv: 'Srce', postavke: [
     ['defi', 'Defibrilator (samotest OK)'],
     ['elektrode', 'Elektrode (rok uporabe)'],
     ['ekg', 'EKG-kabli']
   ]},
   { id: 'infuzije', naziv: 'Infuzije', postavke: [
     ['raztopine', 'Infuzijske raztopine (rok, količina)'],
-    ['kanile', 'Kanile']
+    ['kanile', 'Kanile in sistemi']
   ]},
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
-    ['opornice', 'Vratne opornice'],
-    ['vakuum', 'Vakuumske blazine'],
-    ['splint', 'EasySplint'],
-    ['pasovi', 'Pasovi']
+    ['opornice', 'Opornice'],
+    ['ovratnice', 'Ovratnice']
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
     ['povoji', 'Povoji in obliži'],
-    ['saniteta', 'Sanitetni material']
+    ['hemostatiki', 'Hemostatiki (rok uporabe)']
   ]},
   { id: 'zascita', naziv: 'Zaščita', postavke: [
     ['rokavice', 'Rokavice in maske'],
@@ -92,42 +92,122 @@ export const SKUPINE = [
 // ======================================================================
 export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
-    ['morfij', 'Morfij'],
+    ['morfin', 'Morfin'],
     ['fentanil', 'Fentanil'],
-    ['piritramid', 'Dipidolor/piritramid']
+    ['midazolam', 'Midazolam']
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
     ['adrenalin', 'Adrenalin', { kolicina: true }],
     ['amiodaron', 'Amiodaron'],
-    ['adenozin', 'Adenozin'],
-    ['diazepam', 'Diazepam/Apaurin'],
-    ['ketamin', 'Ketamin'],
     ['atropin', 'Atropin'],
-    ['aspirin', 'Aspirin'],
-    ['metoklopramid', 'Reglan'],
-    ['digoxin', 'Digoksin'],
+    ['aspirin', 'Acetilsalicilna kislina'],
     ['glukoza', 'Glukoza'],
-    ['urapidil', 'Ebrantil'],
-    ['furosemid', 'Furosemid/lasix'],
-    ['rokuronij', 'Esmeron'],
-    ['etomidat', 'Etomidat'],
-    ['granisetron', 'Granisetron'],
-    ['heparin', 'Heparin'],
-    ['haloperidol', 'Haldol'],
-    ['midazolam', 'Midazolam', { kolicina: true }],
-    ['propofol', 'Propofol', { kolicina: true }],
-    ['metoprolol', 'Metoprolol'],
-    ['hidrokortizon', 'SoluCortef'],
-    ['tavegyl', 'Tavegyl'],
-    ['tietilpip', 'Torecan'],
-    ['tramadol', 'Tramal'],
-    ['metilpredi', 'SoluMedrol'],
-    ['nalokson', 'Nalokson', { kolicina: true }],
-    ['nitro', 'Nitroglingual'],
-    ['salbutamol', 'Ventolin'],
-    ['traneks', 'Trenolk']
+    ['hidrokortizon', 'Hidrokortizon'],
+    ['naloksan', 'Naloksan', { kolicina: true }],
+    ['nitro', 'Nitroglicerin'],
+    ['salbutamol', 'Salbutamol']
   ]}
 ];
 
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna'];
+export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+
+// ======================================================================
+//  RAZLIKE MED VOZILI
+//
+//  Vsako vozilo (ali ambulanta) ima standardni seznam zgoraj. Če ima
+//  katero vozilo drugačno opremo, ga vpišeš sem po OZNAKI (tako, kot je
+//  v aplikaciji, npr. 'NM-12'). Vozila brez vnosa imajo standardni seznam.
+//
+//    brez:           česar vozilo NIMA. Cela skupina: 'imob'. Ena postavka
+//                    opreme: 'nosila.vakuum' (skupina.postavka). Eno
+//                    zdravilo: 'zdravila_atropin' (skupina_zdravilo).
+//    dodaj:          dodatna oprema po skupinah, npr.
+//                    { dihala: [['weinmann', 'Weinmann Standard']] }
+//    dodajZdravila:  dodatna zdravila po skupinah, npr.
+//                    { zdravila: [['ketamin', 'Ketamin']] }
+//
+//  PRIMER (odstrani // pred vrsticami, da deluje):
+//  'NM-12': { brez: ['imob', 'nosila.vakuum', 'zdravila_atropin'],
+//             dodaj: { dihala: [['weinmann', 'Weinmann Standard']] } },
+// ======================================================================
+export const RAZLIKE = {
+};
+
+// ======================================================================
+//  AMBULANTA
+//
+//  Seznam za predajo ambulante (vrsta »Ambulanta« pri dodajanju).
+//  Enaka pravila kot zgoraj: ['id', 'Naziv'], id brez presledkov in šumnikov.
+//  Narkotiki imajo količino in serijo, zdravila in tablete rok uporabe.
+//  Razlike med ambulantami vpišeš v RAZLIKE po oznaki ambulante.
+// ======================================================================
+export const AMBULANTA = {
+  skupine: [
+    { id: 'prostor', naziv: 'Prostor in čistoča', postavke: [
+      ['ordinacija', 'Čistoča ordinacije'],
+      ['povrsine', 'Površine razkužene'],
+      ['odpadki', 'Koši in zabojnik za ostre predmete'],
+      ['razkuzilo', 'Razkužilo in milo']
+    ]},
+    { id: 'racunalnik', naziv: 'Računalnik in pisarna', postavke: [
+      ['racunalnik', 'Računalnik'],
+      ['tiskalnik', 'Tiskalnik'],
+      ['bralnik', 'Bralnik kartic'],
+      ['telefon', 'Telefon'],
+      ['kljuci', 'Ključi in dokumenti']
+    ]},
+    { id: 'hladilnik', naziv: 'Hladilnik', postavke: [
+      ['delovanje', 'Hladilnik deluje'],
+      ['temp', 'Temperatura 2–8 °C'],
+      ['cistoca', 'Čistoča hladilnika']
+    ]},
+    { id: 'odvzem', naziv: 'Odvzem krvi in laboratorij', postavke: [
+      ['epruvete', 'Epruvete'],
+      ['igle', 'Igle'],
+      ['brizge', 'Brizge'],
+      ['podveze', 'Podveze'],
+      ['tamponi', 'Tamponi in obliži']
+    ]},
+    { id: 'infuzije', naziv: 'Infuzijske raztopine in sistemi', postavke: [
+      ['raztopine', 'Infuzijske raztopine (rok, količina)'],
+      ['sistemi', 'Infuzijski sistemi'],
+      ['kanile', 'Kanile']
+    ]},
+    { id: 'zascita', naziv: 'Zaščita', postavke: [
+      ['rokS', 'Rokavice S'],
+      ['rokM', 'Rokavice M'],
+      ['rokL', 'Rokavice L'],
+      ['maske', 'Maske'],
+      ['predpasniki', 'Predpasniki']
+    ]},
+    { id: 'oprema', naziv: 'Medicinska oprema', postavke: [
+      ['defi', 'Defibrilator (samotest OK)'],
+      ['ekg', 'EKG aparat'],
+      ['tlak', 'Merilnik tlaka'],
+      ['oksimeter', 'Pulzni oksimeter'],
+      ['glukometer', 'Glukometer'],
+      ['aspirator', 'Aspirator']
+    ]}
+  ],
+  zdravila: [
+    { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
+      ['morfin', 'Morfin'],
+      ['fentanil', 'Fentanil'],
+      ['midazolam', 'Midazolam']
+    ]},
+    { id: 'zdravila', naziv: 'Zdravila', postavke: [
+      ['adrenalin', 'Adrenalin'],
+      ['atropin', 'Atropin'],
+      ['glukoza', 'Glukoza'],
+      ['naloksan', 'Naloksan'],
+      ['salbutamol', 'Salbutamol']
+    ]},
+    { id: 'tablete', naziv: 'Tablete (tabletarij)', postavke: [
+      ['aspirin', 'Acetilsalicilna kislina'],
+      ['paracetamol', 'Paracetamol'],
+      ['ibuprofen', 'Ibuprofen'],
+      ['nitro', 'Nitroglicerin']
+    ]}
+  ]
+};

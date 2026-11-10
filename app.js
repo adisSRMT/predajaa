@@ -1,20 +1,31 @@
 // Predaja vozil – aplikacija. Podatki: Firebase (Firestore + prijava). Seznam opreme in zdravil: oprema.js.
 import { firebaseConfig } from './config.js';
-import { SKUPINE as SKUPINE_RAW, ZDRAVILA as ZDRAVILA_RAW, IZMENE } from './oprema.js';
+import { SKUPINE as SKUPINE_RAW, ZDRAVILA as ZDRAVILA_RAW, IZMENE, RAZLIKE, AMBULANTA } from './oprema.js';
 
 /* ---------- Podatki o obrazcu ---------- */
-var SKUPINE = SKUPINE_RAW.map(function (g) {
-  return { id: g.id, naziv: g.naziv, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1] }; }) };
-});
-var ITEMS = {}, TOTAL = 0;
-SKUPINE.forEach(function (g) { g.postavke.forEach(function (p) { ITEMS[g.id + '.' + p.id] = { g: g, p: p }; TOTAL++; }); });
-/* Zdravila: ključ zdravila je skupina_zdravilo. Narkotiki (narkotik: true) so vedno prvi in obvezni. */
-var ZDR = ZDRAVILA_RAW.map(function (g) {
-  return { id: g.id, naziv: g.naziv, narkotik: !!g.narkotik, kolicina: !!g.kolicina, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1], kolicina: !!(p[2] && p[2].kolicina) }; }) };
-});
-ZDR.sort(function (a, b) { return (b.narkotik ? 1 : 0) - (a.narkotik ? 1 : 0); });
-var MEDS = {}, MED_TOTAL = 0;
-ZDR.forEach(function (g) { g.postavke.forEach(function (p) { MEDS[g.id + '_' + p.id] = { g: g, p: p, nar: g.narkotik, kol: g.narkotik || g.kolicina || p.kolicina }; MED_TOTAL++; }); });
+var SKUPINE, ITEMS, TOTAL, ZDR, MEDS, MED_TOTAL, profKey = null;
+/* Oprema po vozilu: standardni seznam (oprema.js) + razlike za to vozilo (RAZLIKE). Ambulanta ima svoj seznam (AMBULANTA). */
+function mixList(base, dod, sep, brez) {
+  var out = base.map(function (g) { return Object.assign({}, g, { postavke: (brez.indexOf(g.id) < 0 ? g.postavke.filter(function (p) { return brez.indexOf(g.id + sep + p[0]) < 0; }) : []).concat(dod[g.id] || []) }); });
+  Object.keys(dod).forEach(function (id) { if (!base.some(function (g) { return g.id === id; })) out.push({ id: id, naziv: id, postavke: dod[id] }); });
+  return out.filter(function (g) { return g.postavke.length; });
+}
+function setProfile(v) {
+  var amb = !!(v && v.tip === 'ambulanta'), key = (amb ? 'a|' : 'v|') + ((v && v.oznaka) || ''); if (key === profKey) return; profKey = key;
+  var R = (v && RAZLIKE[v.oznaka]) || {}, brez = R.brez || [];
+  SKUPINE = mixList(amb ? AMBULANTA.skupine : SKUPINE_RAW, R.dodaj || {}, '.', brez).map(function (g) {
+    return { id: g.id, naziv: g.naziv, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1] }; }) };
+  });
+  ITEMS = {}; TOTAL = 0;
+  SKUPINE.forEach(function (g) { g.postavke.forEach(function (p) { ITEMS[g.id + '.' + p.id] = { g: g, p: p }; TOTAL++; }); });
+  ZDR = mixList(amb ? AMBULANTA.zdravila : ZDRAVILA_RAW, R.dodajZdravila || {}, '_', brez).map(function (g) {
+    return { id: g.id, naziv: g.naziv, narkotik: !!g.narkotik, kolicina: !!g.kolicina, postavke: g.postavke.map(function (p) { return { id: p[0], naziv: p[1], kolicina: !!(p[2] && p[2].kolicina) }; }) };
+  });
+  ZDR.sort(function (a, b) { return (b.narkotik ? 1 : 0) - (a.narkotik ? 1 : 0); });
+  MEDS = {}; MED_TOTAL = 0;
+  ZDR.forEach(function (g) { g.postavke.forEach(function (p) { MEDS[g.id + '_' + p.id] = { g: g, p: p, nar: g.narkotik, kol: g.narkotik || g.kolicina || p.kolicina }; MED_TOTAL++; }); });
+}
+setProfile(null);
 var GORIVO = [{ v: 'rezerva', l: 'Rezerva' }, { v: '1/4', l: '¼' }, { v: '1/2', l: '½' }, { v: '3/4', l: '¾' }, { v: 'polno', l: 'Polno' }];
 var STANJA = [{ v: 'ok', l: 'V redu' }, { v: 'manjka', l: 'Manjka' }, { v: 'pokvarjeno', l: 'Pokvarjeno' }];
 var STANJA_Z = [{ v: 'ok', l: 'V redu' }, { v: 'manjka', l: 'Manjka' }];
@@ -90,6 +101,7 @@ function rokChip(r) {
   return s === 'poteklo' ? '<span class="chip bad">Poteklo · ' + rokFmt(r) + '</span>' : s === 'mesec' ? '<span class="chip warn">Poteče ta mesec · ' + rokFmt(r) + '</span>' : '<span class="chip ok">V roku · do ' + rokFmt(r) + '</span>';
 }
 function medSummary(v) {
+  setProfile(v);
   var z = v.zdravila || {}, r = { mesec: [], poteklo: [] };
   Object.keys(MEDS).forEach(function (k) {
     var e = z[k]; if (!e || !e.rok) return;
@@ -203,18 +215,19 @@ function stopSubs() { S.subs.forEach(function (u) { try { u(); } catch (e) { } }
 /* ---------- Vozila (skrbnik) ---------- */
 function vehCard(v) {
   var z = v.zadnja, n = Object.keys(v.odprte || {}).length, ms = medSummary(v);
-  var sub = [v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
+  var sub = [v.tip === 'ambulanta' ? 'Ambulanta' : '', v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
   var last = z ? '<div class="meta"><span>Zadnja predaja ' + esc(fmtDT(z.cas)) + '</span><span>' + esc(z.oddajnik) + ' → ' + esc(z.prevzemnik) + '</span></div>' : '<div class="meta"><span>Še brez predaje</span></div>';
-  var chips = (z ? '<span class="chip num">' + nf(z.km) + ' km</span><span class="chip">Gorivo ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + (n ? '<span class="chip bad">' + n + ' ' + napakeTxt(n) + '</span>' : '<span class="chip ok">Brez odprtih napak</span>') +
+  var chips = (z && z.km != null ? '<span class="chip num">' + nf(z.km) + ' km</span><span class="chip">Gorivo ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + (n ? '<span class="chip bad">' + n + ' ' + napakeTxt(n) + '</span>' : '<span class="chip ok">Brez odprtih napak</span>') +
     (ms.poteklo.length ? '<span class="chip bad">Zdravila poteklo: ' + ms.poteklo.length + '</span>' : '') + (ms.mesec.length ? '<span class="chip warn">Poteče ta mesec: ' + ms.mesec.length + '</span>' : '');
-  return '<article class="card stack veh"><div class="veh-head"><a class="oznaka" href="#v-' + esc(v.id) + '">' + esc(v.oznaka) + '</a><span class="reg">' + sub + '</span></div>' + last + '<div class="chips">' + chips + '</div><div class="actions"><a class="btn primary" href="#n-' + esc(v.id) + '">Predaja vozila</a><a class="btn secondary" href="#v-' + esc(v.id) + '">Podrobnosti</a></div></article>';
+  return '<article class="card stack veh"><div class="veh-head"><a class="oznaka" href="#v-' + esc(v.id) + '">' + esc(v.oznaka) + '</a><span class="reg">' + sub + '</span></div>' + last + '<div class="chips">' + chips + '</div><div class="actions"><a class="btn primary" href="#n-' + esc(v.id) + '">' + (v.tip === 'ambulanta' ? 'Predaja ambulante' : 'Predaja vozila') + '</a><a class="btn secondary" href="#v-' + esc(v.id) + '">Podrobnosti</a></div></article>';
 }
 views.vozila = {
   mount: function () {
     A.innerHTML = '<div class="stack"><h1>Vozila</h1><button type="button" class="btn secondary" data-act="scan">' + ICON_QR + 'Skeniraj QR kodo</button><div id="vlist" class="stack"></div>' +
-      '<details class="card" id="addbox"><summary class="sum">Dodaj vozilo</summary>' +
+      '<details class="card" id="addbox"><summary class="sum">Dodaj vozilo ali ambulanto</summary>' +
       '<form id="addform" class="stack" novalidate autocomplete="off" style="margin-top:14px">' +
       '<div class="field"><label for="a-oz">Oznaka vozila</label><input id="a-oz" type="text" maxlength="24" placeholder="npr. NM-12" required></div>' +
+      '<div class="field"><label for="a-tip">Vrsta</label><select id="a-tip"><option value="vozilo">Vozilo</option><option value="ambulanta">Ambulanta</option></select></div>' +
       '<div class="field"><label for="a-reg">Registrska številka</label><input id="a-reg" type="text" maxlength="16"></div>' +
       '<div class="field"><label for="a-en">Enota ali postaja</label><input id="a-en" type="text" maxlength="40"></div>' +
       '<p class="err" id="a-err" role="alert"></p><button class="btn primary" type="submit">Dodaj vozilo</button></form></details>' +
@@ -234,7 +247,7 @@ function addVehicle() {
   err.textContent = '';
   if (!id) { err.textContent = 'Vpiši oznako vozila.'; return; }
   if (voziloById(id)) { err.textContent = 'Vozilo s to oznako že obstaja.'; return; }
-  S.db.doc('vozila/' + id).set({ oznaka: oz, registrska: $('#a-reg').value.trim(), enota: $('#a-en').value.trim(), aktivno: true, ustvarjeno: new Date().toISOString() }).catch(function (e) { handleWriteError(e, true); });
+  S.db.doc('vozila/' + id).set({ oznaka: oz, registrska: $('#a-reg').value.trim(), enota: $('#a-en').value.trim(), tip: $('#a-tip').value, aktivno: true, ustvarjeno: new Date().toISOString() }).catch(function (e) { handleWriteError(e, true); });
   $('#addform').reset(); $('#addbox').open = false; toast('Vozilo dodano. QR kodo najdeš pod »QR kode«.');
 }
 
@@ -243,6 +256,7 @@ function defectRow(n) {
   return '<li class="defect"><div class="row"><strong>' + esc(n.naziv) + '</strong><span class="chip ' + (n.stanje === 'pokvarjeno' ? 'bad' : 'warn') + '">' + esc(stanjeL(n.stanje) || 'Manjka') + '</span></div><div>' + esc(n.opis) + '</div><div class="hint">Od ' + esc(fmtDT(n.ustvarjeno)) + '</div></li>';
 }
 function medsCard(v) {
+  setProfile(v);
   var z = v.zdravila || {}, h = '<section class="card stack"><h2>Zdravila in roki uporabe</h2>';
   ZDR.forEach(function (g) {
     h += '<div class="stack" style="gap:6px"><span class="lbl">' + esc(g.naziv) + (g.narkotik ? ' · NUJNO' : '') + '</span>';
@@ -263,14 +277,14 @@ views.v = {
     if (!v) { el.innerHTML = '<a class="back" href="#vozila">← Vozila</a><div class="card"><h2>Vozilo ni najdeno</h2></div>'; return; }
     var z = v.zadnja, open = S.odprte.filter(function (n) { return n.vozilo === v.id; });
     var recent = v.zadnje || [];
-    var sub = [v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
+    var sub = [v.tip === 'ambulanta' ? 'Ambulanta' : '', v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
     var h = '<a class="back" href="#vozila">← Vozila</a><div><h1>' + esc(v.oznaka) + '</h1><p class="hint">' + sub + '</p></div>';
     h += '<a class="btn primary" href="#n-' + esc(v.id) + '">Začni predajo</a>';
     h += medAlertsHTML(v);
     h += '<section class="card stack"><h2>Odprte napake</h2>' + (open.length ? '<ul class="defects">' + open.map(defectRow).join('') + '</ul>' : '<p class="hint">Na vozilu ni odprtih napak.</p>') + '</section>';
     h += medsCard(v);
     if (z) {
-      h += '<section class="card stack"><h2>Zadnja predaja</h2><dl class="kv"><dt>Čas</dt><dd>' + esc(fmtDT(z.cas)) + '</dd><dt>Izmena</dt><dd>' + esc(z.izmena) + '</dd><dt>Predal</dt><dd>' + esc(z.oddajnik) + '</dd><dt>Prevzel</dt><dd>' + esc(z.prevzemnik) + '</dd><dt>Kilometrina</dt><dd>' + nf(z.km) + ' km</dd><dt>Gorivo</dt><dd>' + esc(gorivoL(z.gorivo)) + '</dd></dl><a class="btn secondary small" href="#p-' + esc(z.id) + '">Odpri predajo</a></section>';
+      h += '<section class="card stack"><h2>Zadnja predaja</h2><dl class="kv"><dt>Čas</dt><dd>' + esc(fmtDT(z.cas)) + '</dd><dt>Izmena</dt><dd>' + esc(z.izmena) + '</dd><dt>Predal</dt><dd>' + esc(z.oddajnik) + '</dd><dt>Prevzel</dt><dd>' + esc(z.prevzemnik) + '</dd>' + (z.km != null ? '<dt>Kilometrina</dt><dd>' + nf(z.km) + ' km</dd><dt>Gorivo</dt><dd>' + esc(gorivoL(z.gorivo)) + '</dd>' : '') + '</dl><a class="btn secondary small" href="#p-' + esc(z.id) + '">Odpri predajo</a></section>';
     }
     if (recent.length) {
       h += '<section class="card"><h2 style="margin-bottom:6px">Zadnje predaje</h2>' + recent.map(function (p) { return '<a class="row link" href="#p-' + esc(p.id) + '"><span>' + esc(fmtDT(p.cas)) + '</span><span class="hint">' + esc(p.oddajnik) + ' → ' + esc(p.prevzemnik) + '</span>' + (p.stNapak ? '<span class="chip bad">Težave: ' + p.stNapak + '</span>' : '<span class="chip ok">V redu</span>') + '</a>'; }).join('') + '</section>';
@@ -282,6 +296,7 @@ views.v = {
 
 /* ---------- Obrazec za predajo ---------- */
 function newDraft(v) {
+  setProfile(v);
   var z = v.zadnja || {};
   var d = {
     hid: 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
@@ -459,13 +474,14 @@ function numField(key, label, unit, extra) {
   return '<div class="field" data-field="' + key + '"><label for="f-' + key + '">' + label + '</label><div class="unit"><input id="f-' + key + '" type="number" inputmode="numeric" min="0" step="1" data-f="' + key + '" value="' + esc(v) + '"><span>' + unit + '</span></div>' + (extra || '') + '</div>';
 }
 function buildForm(v) {
-  var z = v.zadnja || {}, zk = z.kisik || {};
+  setProfile(v);
+  var z = v.zadnja || {}, zk = z.kisik || {}, amb = v.tip === 'ambulanta';
   var saved = loadDraft(v); draft = saved || newDraft(v); touched = !!saved; formSig = vSig(v);
   lsSet('predaja-zadnje', JSON.stringify({ id: v.id, oznaka: v.oznaka }));
   var open = S.odprte.filter(function (n) { return n.vozilo === v.id; });
   var prefilled = !saved && z.prevzemnik;
   var h = '<form id="hf" class="stack" novalidate autocomplete="off">' + (S.admin ? '<a class="back" href="#v-' + esc(v.id) + '">← ' + esc(v.oznaka) + '</a>' : '<a class="back" href="#vozila">← Izbira vozila</a>') +
-    '<div><h1>Predaja vozila ' + esc(v.oznaka) + '</h1>' + (saved ? '<p class="hint">Nadaljuješ nedokončano predajo.</p>' : '') + '</div>';
+    '<div><h1>' + (amb ? 'Predaja ambulante ' : 'Predaja vozila ') + esc(v.oznaka) + '</h1>' + (saved ? '<p class="hint">Nadaljuješ nedokončano predajo.</p>' : '') + '</div>';
   h += medAlertsHTML(v);
   if (open.length) h += '<section class="card stack"><h2>Odprte napake na vozilu (' + open.length + ')</h2><ul class="defects">' + open.map(defectRow).join('') + '</ul></section>';
   h += '<datalist id="ljudje">' + peopleList() + '</datalist>';
@@ -474,17 +490,17 @@ function buildForm(v) {
     '<div class="field" data-field="prevzemnik"><label for="f-prevzemnik">Prevzem (kdo prevzema)</label><input id="f-prevzemnik" type="text" list="ljudje" maxlength="60" data-f="prevzemnik" value="' + esc(draft.prevzemnik) + '"></div>' +
     '<div class="field" data-field="izmena"><span class="lbl">Izmena</span>' + segHTML('izmena', IZMENE.map(function (x) { return { v: x, l: x }; }), draft.izmena) + '</div>' +
     '<div class="field" data-field="cas"><label for="f-cas">Datum in ura predaje</label><input id="f-cas" type="datetime-local" data-f="cas" value="' + esc(draft.cas) + '"></div></section>';
-  h += '<section class="card stack"><h2>Kilometrina in gorivo</h2>' +
+  if (!amb) h += '<section class="card stack"><h2>Kilometrina in gorivo</h2>' +
     numField('km', 'Kilometrina', 'km', z.km != null ? '<span class="hint" id="kmhint">Ob zadnji predaji: ' + nf(z.km) + ' km</span>' : '') +
     '<div class="field" data-field="gorivo"><span class="lbl">Gorivo</span>' + segHTML('gorivo', GORIVO, draft.gorivo) + (z.gorivo ? '<span class="hint">Ob zadnji predaji: ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + '</div></section>';
-  h += '<section class="card stack"><h2>Kisik in baterija</h2><div class="grid2">' +
-    numField('kisik.stac', 'Kisik 1', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
-    numField('kisik.prenosna', 'Kisik 2', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
-    numField('kisik.rezerva', 'Prenosni kisik', 'bar') +
-    numField('defi', 'Baterija lifepaka', '%') + '</div></section>';
+  if (!amb) h += '<section class="card stack"><h2>Kisik in baterija</h2><div class="grid2">' +
+    numField('kisik.stac', 'Stacionarna jeklenka', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
+    numField('kisik.prenosna', 'Prenosna jeklenka', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
+    numField('kisik.rezerva', 'Rezervna jeklenka (neobvezno)', 'bar') +
+    numField('defi', 'Baterija defibrilatorja', '%') + '</div></section>';
   var nar = ZDR.filter(function (g) { return g.narkotik; }), zdr = ZDR.filter(function (g) { return !g.narkotik; });
   if (nar.length) h += '<div class="stack">' + nar.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
-  h += '<div class="stack"><h2>Pregled vozila in opreme</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
+  h += '<div class="stack"><h2>' + (amb ? 'Pregled ambulante in opreme' : 'Pregled vozila in opreme') + '</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
   if (zdr.length) h += '<div class="stack"><h2>Zdravila</h2><p class="hint">Rok uporabe se vpiše enkrat, potem se samo preveri. Ta mesec in po izteku roka te aplikacija opozori.</p>' + zdr.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
   h += '<section class="card stack"><h2>Poškodbe in opombe</h2>' +
     '<div class="field" data-field="poskodbe"><label for="f-poskodbe">Poškodbe karoserije (neobvezno)</label><textarea id="f-poskodbe" maxlength="600" data-f="poskodbe">' + esc(draft.poskodbe) + '</textarea></div>' + fotoHTML() +
@@ -512,6 +528,7 @@ function setupPad(canvas, key) {
 }
 function validate() {
   var iss = [], d = draft, v = voziloById(route.id) || {}, z = v.zadnja || {};
+  setProfile(v);
   function add(keys, msg) { iss.push({ keys: [].concat(keys), msg: msg }); }
   function num(key, label, min, max, req) {
     var raw = String(getPath(d, key) == null ? '' : getPath(d, key)).replace(',', '.').trim();
@@ -523,14 +540,14 @@ function validate() {
   else if (d.oddajnik.trim().toLowerCase() === d.prevzemnik.trim().toLowerCase()) add('prevzemnik', 'Oddajnik in prevzemnik sta ista oseba');
   if (!d.izmena) add('izmena', 'Izberi izmeno');
   if (!d.cas || isNaN(new Date(d.cas))) add('cas', 'Vpiši datum in uro');
-  var km = Number(String(d.km).replace(',', '.'));
-  if (String(d.km).trim() === '' || isNaN(km) || km < 0) add('km', 'Vpiši kilometrino');
+  var amb = v.tip === 'ambulanta', km = Number(String(d.km).replace(',', '.'));
+  if (!amb) if (String(d.km).trim() === '' || isNaN(km) || km < 0) add('km', 'Vpiši kilometrino');
   else if (z.km != null && km < z.km) add('km', 'Kilometrina je manjša kot ob zadnji predaji (' + nf(z.km) + ' km)');
-  if (!d.gorivo) add('gorivo', 'Izberi nivo goriva');
-  num('kisik.stac', 'tlak kisik 1', 0, 400, true);
-  num('kisik.prenosna', 'tlak kisik 2', 0, 400, true);
-  num('kisik.rezerva', 'tlak prenosne jeklenke', 0, 400, false);
-  num('defi', 'baterija lifepaka', 0, 100, true);
+  if (!amb && !d.gorivo) add('gorivo', 'Izberi nivo goriva');
+  if (!amb) num('kisik.stac', 'tlak stacionarne jeklenke', 0, 400, true);
+  if (!amb) num('kisik.prenosna', 'tlak prenosne jeklenke', 0, 400, true);
+  if (!amb) num('kisik.rezerva', 'tlak rezervne jeklenke', 0, 400, false);
+  if (!amb) num('defi', 'baterija defibrilatorja', 0, 100, true);
   /* rok uporabe: vrne sporočilo ali '' */
   function rokProblem(k) {
     var e = medEff(v, k), zz = d.zd[k];
@@ -597,6 +614,7 @@ function showIssues(iss) {
 function submitForm() {
   var iss = validate(); if (iss.length) { showIssues(iss); return; }
   var v = voziloById(route.id); if (!v) return;
+  setProfile(v);
   var btn = $('#sbtn'); btn.disabled = true; btn.textContent = 'Shranjujem …';
   var d = draft, hid = d.hid, nowIso = new Date().toISOString(), casIso = new Date(d.cas).toISOString();
   var kisik = { stac: Number(String(d.kisik.stac).replace(',', '.')), prenosna: Number(String(d.kisik.prenosna).replace(',', '.')) };
@@ -640,6 +658,7 @@ function submitForm() {
   var sig = { vozilo: v.id, podpis1: d.podpis1, podpis2: d.podpis2 };
   var zadnja = { id: hid, cas: casIso, oddajnik: doc.oddajnik, prevzemnik: doc.prevzemnik, izmena: doc.izmena, km: doc.km, gorivo: doc.gorivo, kisik: { stac: kisik.stac, prenosna: kisik.prenosna }, stNapak: doc.stNapak };
   var zadnje = [{ id: hid, cas: casIso, oddajnik: doc.oddajnik, prevzemnik: doc.prevzemnik, stNapak: doc.stNapak }].concat((v.zadnje || []).filter(function (x) { return x.id !== hid; })).slice(0, 6);
+  if (v.tip === 'ambulanta') { delete doc.km; delete doc.gorivo; delete doc.kisik; delete doc.defi; delete zadnja.km; delete zadnja.gorivo; delete zadnja.kisik; }
   /* napake: nova napaka samo, če ista postavka še nima odprte napake */
   var oUpd = {}, idx = 0, openNow = v.odprte || {};
   function hasOpen(post) { return Object.keys(openNow).some(function (id) { return openNow[id].postavka === post; }); }
@@ -700,7 +719,7 @@ views.dom = {
     if (!S.ready.vozila) { l.innerHTML = '<p class="hint">Nalagam vozila …</p>'; return; }
     var act = S.vozila.filter(function (v) { return v.aktivno !== false; });
     l.innerHTML = act.length ? act.map(function (v) {
-      var sub = [v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
+      var sub = [v.tip === 'ambulanta' ? 'Ambulanta' : '', v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
       return '<a class="vlistbtn" href="#n-' + esc(v.id) + '"><b>' + esc(v.oznaka) + '</b><span class="hint">' + sub + '</span></a>';
     }).join('') : '<p class="hint">Na seznamu še ni vozil. Obrni se na skrbnika.</p>';
   }
@@ -759,10 +778,11 @@ views.p = {
       S.detailSig[id] = 'nalagam';
       S.db.doc('podpisi/' + id).get().then(function (s) { S.detailSig[id] = s.exists ? s.data() : null; if (route && route.name === 'p' && route.id === id) views.p.update(); }).catch(function () { S.detailSig[id] = null; if (route && route.name === 'p' && route.id === id) views.p.update(); });
     }
+    setProfile(voziloById(p.vozilo));
     var k = p.kisik || {}, probs = Object.keys(p.stanja || {}).filter(function (x) { return p.stanja[x] !== 'ok'; });
     var h = '<a class="back" href="#v-' + esc(p.vozilo) + '">← ' + esc(p.voziloOznaka || p.vozilo) + '</a><div><h1>Predaja ' + esc(p.voziloOznaka || p.vozilo) + '</h1><p class="hint">' + esc(fmtLong(p.cas)) + ' · ' + esc(p.izmena) + ' izmena</p></div>';
     h += opozHTML(p);
-    h += '<section class="card stack"><dl class="kv"><dt>Predal</dt><dd>' + esc(p.oddajnik) + '</dd><dt>Prevzel</dt><dd>' + esc(p.prevzemnik) + '</dd><dt>Kilometrina</dt><dd>' + nf(p.km) + ' km</dd><dt>Gorivo</dt><dd>' + esc(gorivoL(p.gorivo)) + '</dd><dt>Kisik, stacionarna</dt><dd>' + nf(k.stac) + ' bar</dd><dt>Kisik, prenosna</dt><dd>' + nf(k.prenosna) + ' bar</dd>' + (k.rezerva != null ? '<dt>Kisik, rezervna</dt><dd>' + nf(k.rezerva) + ' bar</dd>' : '') + '<dt>Baterija defibrilatorja</dt><dd>' + nf(p.defi) + ' %</dd></dl></section>';
+    h += '<section class="card stack"><dl class="kv"><dt>Predal</dt><dd>' + esc(p.oddajnik) + '</dd><dt>Prevzel</dt><dd>' + esc(p.prevzemnik) + '</dd>' + (p.km == null ? '' : '<dt>Kilometrina</dt><dd>' + nf(p.km) + ' km</dd><dt>Gorivo</dt><dd>' + esc(gorivoL(p.gorivo)) + '</dd><dt>Kisik, stacionarna</dt><dd>' + nf(k.stac) + ' bar</dd><dt>Kisik, prenosna</dt><dd>' + nf(k.prenosna) + ' bar</dd>' + (k.rezerva != null ? '<dt>Kisik, rezervna</dt><dd>' + nf(k.rezerva) + ' bar</dd>' : '') + '<dt>Baterija defibrilatorja</dt><dd>' + nf(p.defi) + ' %</dd>') + '</dl></section>';
     h += medDetailHTML(p);
     h += '<section class="card stack"><h2>Težave pri predaji (' + probs.length + ')</h2>' + (probs.length ? '<ul class="defects">' + probs.map(function (x) { var nm = (p.imena && p.imena[x]) || (ITEMS[x] ? ITEMS[x].g.naziv + ' · ' + ITEMS[x].p.naziv : x); return '<li class="defect"><div class="row"><strong>' + esc(nm) + '</strong><span class="chip ' + (p.stanja[x] === 'pokvarjeno' ? 'bad' : 'warn') + '">' + esc(stanjeL(p.stanja[x])) + '</span></div><div>' + esc((p.komentarji || {})[x]) + '</div></li>'; }).join('') + '</ul>' : '<p class="hint">Vsa oprema je v redu.</p>') + '</section>';
     if (p.poskodbe || p.opombe) h += '<section class="card stack">' + (p.poskodbe ? '<div><span class="lbl">Poškodbe karoserije</span><p>' + esc(p.poskodbe) + '</p></div>' : '') + (p.opombe ? '<div><span class="lbl">Ostale posebnosti</span><p>' + esc(p.opombe) + '</p></div>' : '') + '</section>';
