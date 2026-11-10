@@ -122,6 +122,18 @@ function medAlertsHTML(v) {
 var S = { db: null, auth: null, user: null, admin: false, roleReady: false, last: null, online: navigator.onLine !== false, pending: 0, vozila: [], odprte: [], zaprte: [], predaje: [], ready: {}, detail: {}, detailSig: {}, detailFoto: {}, loading: {}, closing: null, closingText: '', filterV: '', err: '', subs: [], subKeys: {} };
 var A = $('#app'), route = null, draft = null, formBuilt = false, touched = false, formSig = '';
 var views = {};
+/* Izbira vrste predaje (vozilo / ambulanta): prijavna stran in domov. Zapomni si jo telefon. */
+var vrsta = lsGet('predaja-vrsta') === 'ambulanta' ? 'ambulanta' : 'vozilo';
+function vrstaHTML() {
+  return '<div class="choice" role="group" aria-label="Vrsta predaje">' + [['vozilo', 'Predaja vozila'], ['ambulanta', 'Predaja ambulante']].map(function (x) {
+    return '<button type="button" class="btn big ' + (vrsta === x[0] ? 'primary' : 'secondary') + '" data-act="vrsta" data-v="' + x[0] + '" aria-pressed="' + (vrsta === x[0]) + '"><span>' + x[1] + '</span></button>';
+  }).join('') + '</div>';
+}
+function setVrsta(x) {
+  vrsta = x === 'ambulanta' ? 'ambulanta' : 'vozilo'; lsSet('predaja-vrsta', vrsta);
+  var el = $('#vrsta'); if (el) el.innerHTML = vrstaHTML();
+  if ($('#dlist')) views.dom.update();
+}
 function voziloById(id) { return S.vozila.filter(function (v) { return v.id === id; })[0]; }
 function docs(snap) { return snap.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); }
 /* Odprte napake so shranjene kar na vozilu (polje odprte), da jih lahko vidi tudi predaja brez skrbniških pravic. */
@@ -710,18 +722,21 @@ views.n = {
 views.dom = {
   mount: function () {
     subVozila();
-    A.innerHTML = '<div class="stack"><div class="card stack"><h1>Predaja vozila</h1><p class="hint">Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.</p>' +
+    A.innerHTML = '<div class="stack"><div class="card stack"><h1 id="dh1">Predaja vozila</h1><p class="hint" id="dhint">Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.</p><div id="vrsta"></div>' +
       '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button></div>' +
-      '<h2>Vozila</h2><div id="dlist" class="stack"></div></div>';
+      '<h2 id="dh2">Vozila</h2><div id="dlist" class="stack"></div></div>';
   },
   update: function () {
     var l = $('#dlist'); if (!l) return;
-    if (!S.ready.vozila) { l.innerHTML = '<p class="hint">Nalagam vozila …</p>'; return; }
-    var act = S.vozila.filter(function (v) { return v.aktivno !== false; });
+    var am = vrsta === 'ambulanta';
+    $('#vrsta').innerHTML = vrstaHTML(); $('#dh1').textContent = am ? 'Predaja ambulante' : 'Predaja vozila'; $('#dh2').textContent = am ? 'Ambulante' : 'Vozila';
+    $('#dhint').textContent = am ? 'Skeniraj QR kodo v ambulanti ali izberi ambulanto s seznama.' : 'Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.';
+    if (!S.ready.vozila) { l.innerHTML = '<p class="hint">Nalagam …</p>'; return; }
+    var act = S.vozila.filter(function (v) { return v.aktivno !== false && (v.tip === 'ambulanta') === am; });
     l.innerHTML = act.length ? act.map(function (v) {
       var sub = [v.tip === 'ambulanta' ? 'Ambulanta' : '', v.registrska, v.enota].filter(Boolean).map(esc).join(' · ');
       return '<a class="vlistbtn" href="#n-' + esc(v.id) + '"><b>' + esc(v.oznaka) + '</b><span class="hint">' + sub + '</span></a>';
-    }).join('') : '<p class="hint">Na seznamu še ni vozil. Obrni se na skrbnika.</p>';
+    }).join('') : '<p class="hint">Na seznamu še ni ' + (am ? 'ambulant' : 'vozil') + '. Obrni se na skrbnika.</p>';
   }
 };
 views.hvala = {
@@ -960,6 +975,7 @@ A.addEventListener('click', function (e) {
   else if (a === 'izmena' && draft) { draft.izmena = v; setSeg('izmena', v); var f1 = $('[data-field="izmena"]'); if (f1) f1.classList.remove('invalid'); saveSoon(); }
   else if (a === 'gorivo' && draft) { draft.gorivo = v; setSeg('gorivo', v); var f2 = $('[data-field="gorivo"]'); if (f2) f2.classList.remove('invalid'); saveSoon(); }
   else if (a === 'clrpad') { var c = $('#pad' + b.dataset.p); if (c && c.clearPad) c.clearPad(); }
+  else if (a === 'vrsta') { setVrsta(v); }
   else if (a === 'scan') { doScan(); }
   else if (a === 'login-email') { showLogin('email'); }
   else if (a === 'login-back') { try { history.replaceState(null, '', location.pathname + location.search); } catch (x) { } showLogin('choice'); }
@@ -1015,10 +1031,10 @@ function showLogin(mode, note) {
   if (mode === 'email' && !note && withCar) note = 'Prijavi se, da odpreš predajo vozila.';
   var h = '<div class="login card stack"><img class="logo-nmp" src="logo-nmp.png" alt="Nujna medicinska pomoč Slovenija" width="132" height="132">';
   if (mode === 'choice') {
-    h += '<h1>Predaja vozila</h1><p class="hint">Izberi, kako želiš nadaljevati.</p><div class="choice">' +
+    h += '<h1>Predaja</h1><p class="hint">Najprej izberi, kaj predajaš.</p><div id="vrsta">' + vrstaHTML() + '</div><p class="hint">Nato skeniraj QR kodo ali se prijavi.</p><div class="choice">' +
       '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button>' +
       '<button type="button" class="btn secondary big" data-act="login-email">' + ICON_MAIL + '<span>Prijava z e-pošto</span></button></div>' +
-      '<p class="hint">QR koda izbere vozilo, nato se prijaviš z e-pošto. Na istem telefonu se prijaviš samo enkrat.</p>';
+      '<p class="hint">QR koda izbere vozilo ali ambulanto, nato se prijaviš z e-pošto. Na istem telefonu se prijaviš samo enkrat.</p>';
   } else {
     h += '<h1>Prijava</h1>' + (note ? '<p class="notice ok" role="status">' + esc(note) + '</p>' : '<p class="hint">Vpiši podatke, ki ti jih je dal skrbnik aplikacije.</p>') +
       '<form id="loginform" class="stack" novalidate><div class="field"><label for="l-email">E-poštni naslov</label><input id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>' +
