@@ -1,5 +1,5 @@
 {
-  "name": "predaja-apk",
+  "name": "predaja-vozil-apk",
   "version": "1.0.0",
   "private": true,
   "description": "Android ovoj (APK) za spletno aplikacijo Predaja vozil. Gradi se na GitHubu (Actions).",
