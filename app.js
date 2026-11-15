@@ -505,11 +505,11 @@ function buildForm(v) {
   if (!amb) h += '<section class="card stack"><h2>Kilometrina in gorivo</h2>' +
     numField('km', 'Kilometrina', 'km', z.km != null ? '<span class="hint" id="kmhint">Ob zadnji predaji: ' + nf(z.km) + ' km</span>' : '') +
     '<div class="field" data-field="gorivo"><span class="lbl">Gorivo</span>' + segHTML('gorivo', GORIVO, draft.gorivo) + (z.gorivo ? '<span class="hint">Ob zadnji predaji: ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + '</div></section>';
-  if (!amb) h += '<section class="card stack"><h2>Kisik in baterija</h2><div class="grid2">' +
+  if (!amb) h += '<section class="card stack"><h2>Kisik</h2><div class="grid2">' +
     numField('kisik.stac', 'Kisik 1', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
     numField('kisik.prenosna', 'Kisik 2', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
     numField('kisik.rezerva', 'Prenosni kisik', 'bar') +
-    numField('respi', 'Prenosni respirator', '%') + '</div></section>';
+    numField('respi', 'Prenosni respirator', 'bar') + '</div></section>';
   var nar = ZDR.filter(function (g) { return g.narkotik; }), zdr = ZDR.filter(function (g) { return !g.narkotik; });
   if (nar.length) h += '<div class="stack">' + nar.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
   h += '<div class="stack"><h2>' + (amb ? 'Pregled ambulante in opreme' : 'Pregled vozila in opreme') + '</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
