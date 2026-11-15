@@ -53,7 +53,7 @@ export const SKUPINE = [
     ['vakuum', 'Vakuumske blazine'],
     ['nosila', 'Zajemalna nosila'],
     ['kocka', 'Kocka'],
-    ['pasovi', 'Pasovi za imobilizacijo]
+    ['pasovi', 'Pasovi za imobilizacijo']
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
     ['povoji', 'Povoji in obliži'],
@@ -112,7 +112,7 @@ export const ZDRAVILA = [
 ];
 
 // Možnosti izmene
-export const IZMENE = ['Dnevna', 'Nočna', '24 h'];
+export const IZMENE = ['Dnevna', 'Nočna'];
 
 // ======================================================================
 //  RAZLIKE MED VOZILI
