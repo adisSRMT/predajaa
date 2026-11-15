@@ -29,18 +29,17 @@ export const SKUPINE = [
     ['kartica', 'Kartica za gorivo']
   ]},
   { id: 'nosila', naziv: 'Nosila in transport', postavke: [
-    ['glavna', 'Glavna nosila'],
-    ['stol', 'Stol za prenos'],
-    ['vakuum', 'Vakuumska blazina'],
+    ['postelja', 'Postelja'],
+    ['stol', 'Kardiostol'],
     ['pasovi', 'Pasovi']
   ]},
   { id: 'dihala', naziv: 'Dihala', postavke: [
     ['aspirator', 'Aspirator'],
-    ['ambu', 'Ambu mehur in maske'],
+    ['ambu', 'AMBU'],
     ['dihpot', 'Pripomočki za dihalno pot'],
-    ['kisikmaske', 'Kisikove maske in cevke']
+    ['kisikmaske', 'Kisikove maske']
   ]},
-  { id: 'srce', naziv: 'Srce', postavke: [
+  { id: 'defi', naziv: 'Lifepak 15', postavke: [
     ['defi', 'Defibrilator (samotest OK)'],
     ['elektrode', 'Elektrode (rok uporabe)'],
     ['ekg', 'EKG-kabli']
@@ -50,12 +49,15 @@ export const SKUPINE = [
     ['kanile', 'Kanile in sistemi']
   ]},
   { id: 'imob', naziv: 'Imobilizacija', postavke: [
-    ['opornice', 'Opornice'],
-    ['ovratnice', 'Ovratnice']
+    ['opornice', 'Vratne opornice'],
+    ['vakuum', 'Vakuumske blazine'],
+    ['nosila', 'Zajemalna nosila'],
+    ['kocka', 'Kocka'],
+    ['pasovi', 'Pasovi za imobilizacijo]
   ]},
   { id: 'rane', naziv: 'Oskrba ran', postavke: [
     ['povoji', 'Povoji in obliži'],
-    ['hemostatiki', 'Hemostatiki (rok uporabe)']
+    ['sanitetni', 'Sanitetni material (rok uporabe)']
   ]},
   { id: 'zascita', naziv: 'Zaščita', postavke: [
     ['rokavice', 'Rokavice in maske'],
