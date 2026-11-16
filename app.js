@@ -396,7 +396,7 @@ function groupHTML(g) {
   var d = groupCount(g), t = g.postavke.length;
   return '<details class="grp" data-g="' + g.id + '" open><summary><span>' + esc(g.naziv) + '</span><span class="chip' + (d === t ? ' ok' : '') + '" data-count="' + g.id + '">' + d + '/' + t + '</span></summary><div class="grp-body">' +
     g.postavke.map(function (p) { return itemHTML(g.id + '.' + p.id); }).join('') +
-    '<button type="button" class="btn secondary small" data-act="allok" data-g="' + g.id + '">Vse nepregledano v redu</button></div></details>';
+    '<button type="button" class="btn secondary small" data-act="allok" data-g="' + g.id + '">Vse v redu</button></div></details>';
 }
 function updateGroup(gid) {
   var g = SKUPINE.filter(function (x) { return x.id === gid; })[0], c = $('[data-count="' + gid + '"]'); if (!c || !g) return;
