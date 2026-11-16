@@ -96,18 +96,27 @@ export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
     ['morfin', 'Morfin'],
     ['fentanil', 'Fentanil'],
-    ['midazolam', 'Midazolam']
+    ['piritramid', 'Dipidolor/Piritramid']
+    ['ketamin', 'Ketamin'],
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
     ['adrenalin', 'Adrenalin', { kolicina: true }],
     ['amiodaron', 'Amiodaron'],
-    ['atropin', 'Atropin'],
-    ['aspirin', 'Acetilsalicilna kislina'],
+    ['metamizol', 'Analgin'],
+    ['diazepam', 'Apaurin'],
+    ['amiodaron', 'Amiodaron'],
+    ['aspirin', 'Aspirin'],
+    ['adenozin', 'Adenozin'],
+    ['diazepam', 'Diazepam'],
+    ['digoxin', 'Digoksin'],
+    ['Rokuronij', 'Esmeron'],
     ['glukoza', 'Glukoza'],
-    ['hidrokortizon', 'Hidrokortizon'],
-    ['naloksan', 'Naloksan', { kolicina: true }],
-    ['nitro', 'Nitroglicerin'],
-    ['salbutamol', 'Salbutamol']
+    ['granisetron', 'Granisetron'],
+    ['hidrokortizon', 'SoluCortef'],
+    ['metoklopramid', 'Reglan'],
+    ['naloksan', 'Nalokson', { kolicina: true }],
+    ['nitro', 'Nitrolingual'],
+    ['salbutamol', 'Ventolin']
   ]}
 ];
 
