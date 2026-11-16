@@ -94,7 +94,7 @@ export const SKUPINE = [
 // ======================================================================
 export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
-    ['morfin', 'Morfin'],
+    ['morfin', 'Morfij'],
     ['fentanil', 'Fentanil'],
     ['piritramid', 'Dipidolor/Piritramid'],
     ['ketamin', 'Ketamin']
@@ -104,19 +104,33 @@ export const ZDRAVILA = [
     ['amiodaron', 'Amiodaron'],
     ['metamizol', 'Analgin'],
     ['diazepam', 'Apaurin'],
-    ['amiodaron', 'Amiodaron'],
+    ['flumazenil', 'Anexate'],
     ['aspirin', 'Aspirin'],
     ['adenozin', 'Adenozin'],
     ['diazepam', 'Diazepam'],
     ['digoxin', 'Digoksin'],
     ['rokuronij', 'Esmeron'],
+    ['etomidat', 'Etomidat'],
+    ['urapidil', 'Ebrantil'],
+    ['furosemid', 'Furosemid'],
     ['glukoza', 'Glukoza'],
     ['granisetron', 'Granisetron'],
+    ['heparin', 'Heparin'],
+    ['haloperidol', 'Haldol'],
     ['hidrokortizon', 'SoluCortef'],
+    ['metilpredinozon', 'SoluMedrol'],
     ['metoklopramid', 'Reglan'],
+    ['mgso', 'MagnezijS'],
+    ['midazolam', 'Midazolam'],
+    ['metoprolol', 'Metoprolol'],
     ['naloksan', 'Nalokson', { kolicina: true }],
     ['nitro', 'Nitrolingual'],
-    ['salbutamol', 'Ventolin']
+    ['pantoprazol', 'Nolpaza'],
+    ['propofol', 'Propofol'],
+    ['tietilperazin', 'Torecan'],
+    ['tramadol', 'Tramal'],
+    ['salbutamol', 'Ventolin'],
+    ['txa', 'Trenolk']
   ]}
 ];
 
