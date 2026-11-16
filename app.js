@@ -242,7 +242,7 @@ views.vozila = {
       '<form id="addform" class="stack" novalidate autocomplete="off" style="margin-top:14px">' +
       '<div class="field"><label for="a-oz">Oznaka vozila</label><input id="a-oz" type="text" maxlength="24" placeholder="npr. NM-12" required></div>' +
       '<div class="field"><label for="a-tip">Vrsta</label><select id="a-tip"><option value="vozilo">Vozilo</option><option value="ambulanta">Ambulanta</option></select></div>' +
-      '<div class="field"><label for="a-reg"><strong>Registrska številka</strong></label><input id="a-reg" type="text" maxlength="16"></div>' +
+      '<div class="field"><label for="a-reg" style="font-weight:700 !important;">Registrska številka</label><input id="a-reg" type="text" maxlength="16"></div>' +
       '<div class="field"><label for="a-en">Enota ali postaja</label><input id="a-en" type="text" maxlength="40"></div>' +
       '<p class="err" id="a-err" role="alert"></p><button class="btn primary" type="submit">Dodaj vozilo</button></form></details>' +
       '<div id="vhidden"></div></div>';
