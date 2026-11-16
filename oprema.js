@@ -96,8 +96,8 @@ export const ZDRAVILA = [
   { id: 'narkotiki', naziv: 'Narkotiki', narkotik: true, postavke: [
     ['morfin', 'Morfin'],
     ['fentanil', 'Fentanil'],
-    ['piritramid', 'Dipidolor/Piritramid']
-    ['ketamin', 'Ketamin'],
+    ['piritramid', 'Dipidolor/Piritramid'],
+    ['ketamin', 'Ketamin']
   ]},
   { id: 'zdravila', naziv: 'Zdravila', postavke: [
     ['adrenalin', 'Adrenalin', { kolicina: true }],
