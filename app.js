@@ -125,11 +125,13 @@ var views = {};
 /* Izbira vrste predaje (vozilo / ambulanta): prijavna stran in domov. Zapomni si jo telefon. */
 var vrsta = lsGet('predaja-vrsta') === 'ambulanta' ? 'ambulanta' : 'vozilo';
 function vrstaHTML() {
+  if (S.dostop && S.dostop !== 'vse') return '';
   return '<div class="choice" role="group" aria-label="Vrsta predaje">' + [['vozilo', 'Predaja vozila'], ['ambulanta', 'Predaja ambulante']].map(function (x) {
     return '<button type="button" class="btn big ' + (vrsta === x[0] ? 'primary' : 'secondary') + '" data-act="vrsta" data-v="' + x[0] + '" aria-pressed="' + (vrsta === x[0]) + '"><span>' + x[1] + '</span></button>';
   }).join('') + '</div>';
 }
 function setVrsta(x) {
+  if (S.dostop && S.dostop !== 'vse') return;
   vrsta = x === 'ambulanta' ? 'ambulanta' : 'vozilo'; lsSet('predaja-vrsta', vrsta);
   var el = $('#vrsta'); if (el) el.innerHTML = vrstaHTML();
   if ($('#dlist')) views.dom.update();
@@ -505,11 +507,11 @@ function buildForm(v) {
   if (!amb) h += '<section class="card stack"><h2>Kilometrina in gorivo</h2>' +
     numField('km', 'Kilometrina', 'km', z.km != null ? '<span class="hint" id="kmhint">Ob zadnji predaji: ' + nf(z.km) + ' km</span>' : '') +
     '<div class="field" data-field="gorivo"><span class="lbl">Gorivo</span>' + segHTML('gorivo', GORIVO, draft.gorivo) + (z.gorivo ? '<span class="hint">Ob zadnji predaji: ' + esc(gorivoL(z.gorivo)) + '</span>' : '') + '</div></section>';
-  if (!amb) h += '<section class="card stack"><h2>Kisik</h2><div class="grid2">' +
-    numField('kisik.stac', 'Kisik 1', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
-    numField('kisik.prenosna', 'Kisik 2', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
-    numField('kisik.rezerva', 'Prenosni kisik', 'bar') +
-    numField('respi', 'Prenosni respirator', 'bar') + '</div></section>';
+  if (!amb) h += '<section class="card stack"><h2>Kisik in baterija</h2><div class="grid2">' +
+    numField('kisik.stac', 'Stacionarna jeklenka', 'bar', zk.stac != null ? '<span class="hint">Zadnjič: ' + nf(zk.stac) + ' bar</span>' : '') +
+    numField('kisik.prenosna', 'Prenosna jeklenka', 'bar', zk.prenosna != null ? '<span class="hint">Zadnjič: ' + nf(zk.prenosna) + ' bar</span>' : '') +
+    numField('kisik.rezerva', 'Rezervna jeklenka (neobvezno)', 'bar') +
+    numField('defi', 'Baterija defibrilatorja', '%') + '</div></section>';
   var nar = ZDR.filter(function (g) { return g.narkotik; }), zdr = ZDR.filter(function (g) { return !g.narkotik; });
   if (nar.length) h += '<div class="stack">' + nar.map(function (g) { return medGroupHTML(v, g); }).join('') + '</div>';
   h += '<div class="stack"><h2>' + (amb ? 'Pregled ambulante in opreme' : 'Pregled vozila in opreme') + '</h2><p class="hint">Za vsako postavko izberi stanje. Pri »Manjka« in »Pokvarjeno« napiši, kaj je narobe; napaka se zabeleži na vozilo.</p>' + SKUPINE.map(groupHTML).join('') + '</div>';
@@ -556,10 +558,10 @@ function validate() {
   if (!amb) if (String(d.km).trim() === '' || isNaN(km) || km < 0) add('km', 'Vpiši kilometrino');
   else if (z.km != null && km < z.km) add('km', 'Kilometrina je manjša kot ob zadnji predaji (' + nf(z.km) + ' km)');
   if (!amb && !d.gorivo) add('gorivo', 'Izberi nivo goriva');
-  if (!amb) num('kisik.stac', 'Kisik 1', 0, 400, true);
-  if (!amb) num('kisik.prenosna', 'Kisik 2', 0, 400, true);
-  if (!amb) num('kisik.rezerva', 'Prenosni kisik', 0, 400, false);
-  if (!amb) num('respi', 'Respirator', 0, 400, true);
+  if (!amb) num('kisik.stac', 'tlak stacionarne jeklenke', 0, 400, true);
+  if (!amb) num('kisik.prenosna', 'tlak prenosne jeklenke', 0, 400, true);
+  if (!amb) num('kisik.rezerva', 'tlak rezervne jeklenke', 0, 400, false);
+  if (!amb) num('defi', 'baterija defibrilatorja', 0, 100, true);
   /* rok uporabe: vrne sporočilo ali '' */
   function rokProblem(k) {
     var e = medEff(v, k), zz = d.zd[k];
@@ -713,6 +715,7 @@ views.n = {
     if (!(S.admin ? S.ready.vozila : (S.ready['v:' + route.id] || S.ready.vozila))) return;
     var v = voziloById(route.id);
     if (!v) { if (!formBuilt) A.innerHTML = '<a class="back" href="#vozila">← ' + (S.admin ? 'Vozila' : 'Izbira vozila') + '</a>' + '<div class="card"><h2>Vozilo ni najdeno</h2><p>Oznaka vozila iz QR kode ne obstaja v aplikaciji.</p></div>'; return; }
+    if (!smeVozilo(v)) { if (!formBuilt) A.innerHTML = '<a class="back" href="#vozila">← Izbira</a><div class="card"><h2>Ni dostopa</h2><p>Tvoj račun nima dostopa do te vrste predaje.</p></div>'; return; }
     if (formBuilt) { if (!touched && vSig(v) !== formSig) buildForm(v); return; }
     buildForm(v); formBuilt = true;
   }
@@ -722,15 +725,18 @@ views.n = {
 views.dom = {
   mount: function () {
     subVozila();
-    A.innerHTML = '<div class="stack"><div class="card stack"><h1 id="dh1">Predaja vozila</h1><p class="hint" id="dhint">Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.</p><div id="vrsta"></div>' +
+    A.innerHTML = '<div class="stack"><div class="card stack"><h1 id="dh1">Predaja vozila</h1><p class="hint" id="dhint">Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.</p><div id="vrsta"></div><p class="hint" id="dinfo" style="font-size:.8em;opacity:.75"></p>' +
       '<button type="button" class="btn primary big" data-act="scan">' + ICON_QR + '<span>Skeniraj QR kodo</span></button></div>' +
       '<h2 id="dh2">Vozila</h2><div id="dlist" class="stack"></div></div>';
   },
   update: function () {
     var l = $('#dlist'); if (!l) return;
-    var am = vrsta === 'ambulanta';
+    var am = (S.dostop && S.dostop !== 'vse' ? S.dostop : vrsta) === 'ambulanta';
     $('#vrsta').innerHTML = vrstaHTML(); $('#dh1').textContent = am ? 'Predaja ambulante' : 'Predaja vozila'; $('#dh2').textContent = am ? 'Ambulante' : 'Vozila';
     $('#dhint').textContent = am ? 'Skeniraj QR kodo v ambulanti ali izberi ambulanto s seznama.' : 'Skeniraj QR kodo na vozilu ali izberi vozilo s seznama.';
+    var di = $('#dinfo'), ok = S.dostopSrc === 'nastavljeno';
+    if (di) di.textContent = S.admin ? 'Račun: skrbnik (vidi vse)' : 'Dostop računa: ' + ({ vse: 'vozila in ambulante', vozilo: 'samo vozila', ambulanta: 'samo ambulante', nic: 'ni veljaven' }[S.dostop || 'vse']) + (ok || !S.dostopSrc ? '' : ' · ' + S.dostopSrc + ' · UID ' + (S.user ? S.user.uid : ''));
+    if (S.dostop === 'nic' && !S.admin) { l.innerHTML = '<p class="hint">Dostop tega računa ni pravilno nastavljen. Obrni se na skrbnika.</p>'; return; }
     if (!S.ready.vozila) { l.innerHTML = '<p class="hint">Nalagam …</p>'; return; }
     var act = S.vozila.filter(function (v) { return v.aktivno !== false && (v.tip === 'ambulanta') === am; });
     l.innerHTML = act.length ? act.map(function (v) {
@@ -1024,7 +1030,7 @@ $('#logout').addEventListener('click', function () {
 /* ---------- Zagon ---------- */
 var loginShown = false;
 function showLogin(mode, note) {
-  loginShown = true; stopSubs(); S.user = null; route = null; draft = null; formBuilt = false; touched = false; setChrome(false); updateNotice();
+  loginShown = true; stopSubs(); S.user = null; S.dostop = 'vse'; route = null; draft = null; formBuilt = false; touched = false; setChrome(false); updateNotice();
   var withCar = /^#n-/.test(location.hash || '');
   var explicit = !!mode;
   if (!mode) mode = withCar ? 'email' : 'choice';
@@ -1064,12 +1070,27 @@ function loadRole(user) {
   var timeout = new Promise(function (res) { setTimeout(function () { res(cached === 'admin'); }, 8000); });
   return Promise.race([probe, timeout]);
 }
+/* Dostop računa: v Firestore zbirki »uporabniki« (dokument = UID) polje dostop = 'vozilo' ali 'ambulanta'. Brez polja = oboje. */
+function loadDostop(user) {
+  var key = 'predaja-dostop-' + user.uid, cached = lsGet(key) || 'vse';
+  if (!S.online) { S.dostopSrc = 'brez povezave, shranjena vrednost'; return Promise.resolve(cached); }
+  var q = S.db.doc('uporabniki/' + user.uid).get().then(function (d) {
+    var raw = d.exists && d.data().dostop != null ? String(d.data().dostop) : '', x;
+    if (!d.exists) { x = 'vse'; S.dostopSrc = 'dokument s tem UID ne obstaja v zbirki uporabniki'; }
+    else if (raw === 'vozilo' || raw === 'ambulanta') { x = raw; S.dostopSrc = 'nastavljeno'; }
+    else if (raw === '') { x = 'vse'; S.dostopSrc = 'dokument obstaja, polja dostop pa ni'; }
+    else { x = 'nic'; S.dostopSrc = 'neveljavna vrednost »' + raw + '« (dovoljeno: vozilo ali ambulanta)'; }
+    lsSet(key, x); return x;
+  }, function (e) { S.dostopSrc = 'napaka pri branju (' + ((e && e.code) || '?') + '), shranjena vrednost'; return cached; });
+  return Promise.race([q, new Promise(function (res) { setTimeout(function () { S.dostopSrc = 'časovna omejitev, shranjena vrednost'; res(cached); }, 6000); })]);
+}
+function smeVozilo(v) { return S.admin || !S.dostop || S.dostop === 'vse' || S.dostop === (v.tip === 'ambulanta' ? 'ambulanta' : 'vozilo'); }
 function startSession(user) {
   loginShown = false; S.user = user; S.admin = false; S.roleReady = false; S.last = null;
   setChrome(true); A.innerHTML = '<p class="hint">Nalagam …</p>';
-  loadRole(user).then(function (a) {
-    if (S.user !== user) return;
-    S.admin = a; S.roleReady = true; setChrome(true); updateNotice();
+  Promise.all([loadRole(user), loadDostop(user)]).then(function (r) {
+    var a = r[0]; if (S.user !== user) return;
+    S.dostop = a ? 'vse' : r[1]; S.admin = a; S.roleReady = true; setChrome(true); updateNotice();
     if (a) subVozila();
     onRoute();
   });
