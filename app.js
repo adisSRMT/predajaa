@@ -1076,9 +1076,9 @@ function loadDostop(user) {
   if (!S.online) { S.dostopSrc = 'brez povezave, shranjena vrednost'; return Promise.resolve(cached); }
   var q = S.db.doc('uporabniki/' + user.uid).get().then(function (d) {
     var raw = d.exists && d.data().dostop != null ? String(d.data().dostop) : '', x;
-    if (!d.exists) { x = 'vse'; S.dostopSrc = 'dokument s tem UID ne obstaja v zbirki uporabniki'; }
+    if (!d.exists) { x = 'vse'; S.dostopSrc = 'dokument'; }
     else if (raw === 'vozilo' || raw === 'ambulanta') { x = raw; S.dostopSrc = 'nastavljeno'; }
-    else if (raw === '') { x = 'vse'; S.dostopSrc = 'dokument obstaja, polja dostop pa ni'; }
+    else if (raw === '') { x = 'vse'; S.dostopSrc = 'dokument obstaja'; }
     else { x = 'nic'; S.dostopSrc = 'neveljavna vrednost »' + raw + '« (dovoljeno: vozilo ali ambulanta)'; }
     lsSet(key, x); return x;
   }, function (e) { S.dostopSrc = 'napaka pri branju (' + ((e && e.code) || '?') + '), shranjena vrednost'; return cached; });
