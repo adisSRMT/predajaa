@@ -109,7 +109,7 @@ export const ZDRAVILA = [
     ['adenozin', 'Adenozin'],
     ['diazepam', 'Diazepam'],
     ['digoxin', 'Digoksin'],
-    ['Rokuronij', 'Esmeron'],
+    ['rokuronij', 'Esmeron'],
     ['glukoza', 'Glukoza'],
     ['granisetron', 'Granisetron'],
     ['hidrokortizon', 'SoluCortef'],
