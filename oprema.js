@@ -103,6 +103,7 @@ export const ZDRAVILA = [
     ['adrenalin', 'Adrenalin', { kolicina: true }],
     ['amiodaron', 'Amiodaron'],
     ['metamizol', 'Analgin'],
+    ['aminofilin', 'Aminofilin'],
     ['diazepam', 'Apaurin'],
     ['flumazenil', 'Anexate'],
     ['aspirin', 'Aspirin'],
