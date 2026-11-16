@@ -12,9 +12,23 @@ service cloud.firestore {
     // Seznam uredi v Firebase konzoli, v zavihku Rules (glej BERI-ME.md, korak 6b).
     function jeAdmin() {
       return request.auth != null
-        && (request.auth.token.email in ['adissaramati1@gmail.com']
+        && (request.auth.token.email in ['skrbnik@primer.si']
             || (exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
                 && get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.vloga == 'admin'));
+    }
+
+    // Dostop do vrste predaje: polje dostop v dokumentu uporabniki/UID = 'vozilo' ali 'ambulanta'.
+    // Brez polja (ali brez dokumenta) ima račun dostop do obojega. Skrbnik vedno vse.
+    function mojDostop() {
+      return exists(/databases/$(database)/documents/uporabniki/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/uporabniki/$(request.auth.uid)).data.get('dostop', 'vse')
+        : 'vse';
+    }
+    function smeTip(tip) {
+      return jeAdmin() || mojDostop() == 'vse' || mojDostop() == tip;
+    }
+    function tipVozila(id) {
+      return get(/databases/$(database)/documents/vozila/$(id)).data.get('tip', 'vozilo');
     }
 
     // Vloge: vsak lahko prebere samo svoj zapis, nihče ga ne more spremeniti iz aplikacije.
@@ -31,7 +45,7 @@ service cloud.firestore {
       allow get, list: if prijavljen();
       allow create: if jeAdmin();
       allow update: if jeAdmin()
-        || (prijavljen()
+        || (prijavljen() && smeTip(resource.data.get('tip', 'vozilo'))
             && request.resource.data.diff(resource.data).affectedKeys()
                  .hasOnly(['zadnja', 'zadnje', 'zdravila', 'odprte']));
       allow delete: if false;
@@ -40,7 +54,7 @@ service cloud.firestore {
     // Predaje: vsak prijavljen jih lahko odda, branje samo skrbnik.
     // Zapisane predaje se ne dajo spremeniti ali izbrisati.
     match /predaje/{id} {
-      allow create: if prijavljen();
+      allow create: if prijavljen() && smeTip(tipVozila(request.resource.data.vozilo));
       allow read: if jeAdmin();
       allow update, delete: if false;
     }
